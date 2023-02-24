@@ -1,48 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <link rel="stylesheet" href="style.css" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
-    <script type="module" src="/main.js" defer></script>
-    <style>
-      .logo.vanilla:hover {
-        filter: drop-shadow(0 0 2em #ffe21c);
-      }
-    </style>
+    <title>OpenSpace Video Exporter</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script type="text/javascript" src="openspace-api.js"></script>
+    <script type="text/javascript" src="main.js"></script>
+    <script>
+      let ua = navigator.userAgent;
+      console.log(ua);
+    </script>
   </head>
-
   <body>
-    <div class="container">
-      <h1>Welcome to Tauri!</h1>
-
-      <div class="row">
-        <a href="https://tauri.app" target="_blank">
-          <img src="/assets/tauri.svg" class="logo tauri" alt="Tauri logo" />
-        </a>
-        <a
-          href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"
-          target="_blank"
-        >
-          <img
-            src="/assets/javascript.svg"
-            class="logo vanilla"
-            alt="JavaScript logo"
-          />
-        </a>
+    <div id="container" class="disconnected">
+      <div id="connection-status" class="connection-status">
+        Connect to OpenSpace:
+        <input id='ipaddress' type=text placeholder="Enter ip address"/>
+        <button onClick="connectToOpenSpace();">Connect</button>
       </div>
-
-      <p>Click on the Tauri logo to learn more about the framework</p>
-
-      <div class="row">
-        <div>
-          <input id="greet-input" placeholder="Enter a name..." />
-          <button id="greet-button" type="button">Greet</button>
-        </div>
+      <div class='header'>
+        <h1>Headline</h1>
       </div>
-
-      <p id="greet-msg"></p>
+      <div id="main">
+        <input onchange="showFile(this)" type="file">
+      </div>
     </div>
+
+    <div class="card" id="screenshotfolder">
+      Current Screenshot folder: 
+    </div>
+    <div class="card" id="videofolder">
+      Current Video export folder: 
+    </div>
+    <div class="card">
+      Test case #3:  
+      <button onClick="start_ffmpeg()">ffmpeg</button>
+    </div>
+
+    <div class="row">
+      <div>
+        <input id="greet-input" placeholder="Enter a name..." />
+        <button id="greet-button" type="button">Greet</button>
+      </div>
+    </div>
+
+    <p id="greet-msg"></p>
+
+    <script type="text/javascript">
+      connectToOpenSpace('localhost');
+
+      async function showFile(input) {
+        let file = input.files[0];
+        lastmod = file.lastModified; 
+        console.log(new Date(lastmod));
+      }
+    </script>
   </body>
 </html>
