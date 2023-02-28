@@ -17,11 +17,13 @@
         <button onClick="connectToOpenSpace();">Connect</button>
       </div>
       <div class='header'>
-        <h1>Headline</h1>
+        <h1 id="renderStatus">OpenSpace Video Renderer</h1>
       </div>
+<!--
       <div id="main">
         <input onchange="showFile(this)" type="file">
       </div>
+-->
     </div>
 
     <div class="card" id="screenshotfolder">
@@ -32,18 +34,13 @@
     </div>
     <div class="card">
       Test case #3:  
-      <button onClick="start_ffmpeg()">ffmpeg</button>
+      <button onClick="start_ffmpeg()" onClick="">ffmpeg</button>
     </div>
-
-    <div class="row">
-      <div>
-        <input id="greet-input" placeholder="Enter a name..." />
-        <button id="greet-button" type="button">Greet</button>
-      </div>
+    <div class="card">
+      Test case #3:  
+      <button onClick="test()" onClick="">check if file exists</button>
     </div>
-
-    <p id="greet-msg"></p>
-
+    
     <script type="text/javascript">
       connectToOpenSpace('localhost');
 

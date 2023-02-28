@@ -76,8 +76,22 @@ div.disconnected .connection-status {
 }
 
 div.connected .connection-status {
+  display: flex;
   background-color: #080;
   color: #efe;
+  vertical-align: middle;
+  align-items:center;
+  justify-content:center;
+}
+
+div.rendering .connection-status {
+  display: flex;
+  background-color: rgb(255, 166, 0);
+  color: #efe;
+  vertical-align: middle;
+  align-items:center;
+  justify-content:center;
+  font-weight: bold;
 }
 
 .card {
