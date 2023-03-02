@@ -29,6 +29,11 @@
         "renameFile": true,
         "exists": true,
         "scope": ["$TEMP", "$HOME", "$DESKTOP", "$VIDEO"]
+      },
+      "dialog": {
+        "all": true,
+        "open": true,
+        "save": true
       }
     },
     "bundle": {

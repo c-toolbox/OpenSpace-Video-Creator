@@ -45,20 +45,6 @@ input[type=text] {
   border-radius: 3px;
 }
 
-input[type=text].coord {
-  padding:5px;
-  border:1px solid #ccc;
-  -webkit-border-radius: 3px;
-  border-radius: 3px;
-  width: 9ch;
-  margin-right: 0.5em;
-  margin-top: 0.5em;
-}
-
-input[type=text].degree {
-  width: 15ch;
-}
-
 input[type=text]:focus {
     border-color:#333;
 }
@@ -73,6 +59,10 @@ input[type=text]:focus {
 div.disconnected .connection-status {
   background-color: #800;
   color: #fee;
+  display: flex;
+  vertical-align: middle;
+  align-items:center;
+  justify-content:center;
 }
 
 div.connected .connection-status {
@@ -86,12 +76,12 @@ div.connected .connection-status {
 
 div.rendering .connection-status {
   display: flex;
-  background-color: rgb(255, 166, 0);
+  background-color: #ffa600;
   color: #efe;
   vertical-align: middle;
   align-items:center;
   justify-content:center;
-  font-weight: bold;
+  font-size: xx-large;
 }
 
 .card {
@@ -114,6 +104,11 @@ button {
   margin-top: 0.5em;
 }
 
+button:disabled {
+  background-color: #777;
+  color: #ccc;
+}
+
 div.disconnected button {
   background-color: #777;
 }
@@ -126,6 +121,63 @@ h2 {
   margin-top: 0;
 }
 
-button:hover {
+button:enabled:hover {
   background-color: #0a0;
+}
+
+button#stoprecording {
+  background-color: #800;
+  display: none;
+}
+
+button:hover#stoprecording {
+  background-color: rgb(198, 0, 0)
+}
+
+button:disabled#stoprecording  {
+  background-color: #777;
+  color: #ccc;
+}
+
+
+
+/* Standard Syntax */
+@keyframes PULSE{
+  0%{background-color:#a90000;}
+  50%{background-color:#ff0000;}
+  100%{background-color:#a90000;}	
+}
+
+div.recording .connection-status {
+  /* Chrome, Safari, Opera */
+  -webkit-animation: PULSE 1s infinite; 
+
+  /* Standard Syntax */
+  animation: PULSE 1.25s infinite; 
+
+  font-size: xx-large;
+  
+  display: flex;
+  background-color: #ffa600;
+  vertical-align: middle;
+  align-items:center;
+  justify-content:center;
+}
+
+div.generating .connection-status {
+  display: flex;
+  background-color: #4b9ff4;
+  color: #efe;
+  vertical-align: middle;
+  align-items:center;
+  justify-content:center;
+  font-size: xx-large;
+}
+
+div#isConnected {
+  display: block;
+}
+
+div#isDisconnected {
+  display: none;
 }
