@@ -1,7 +1,9 @@
 const { invoke } = window.__TAURI__.tauri;
 const { readDir, BaseDirectory } = window.__TAURI__.fs;
 const { open } = window.__TAURI__.dialog
+const { resourceDir } = window.__TAURI__.path
 
+_USERNAME_ = "";
 _FILE_NAME_ = "";
 _INTERVAL_PROGRESS_ = null;
 _INTERVAL_FRAMES_ = null;
@@ -51,18 +53,17 @@ async function start_ffmpeg() {
   document.getElementById("ffmpeg_button").disabled = true;
 
   let pre_status = await invoke("pre_ffmpeg").then( (res) => {return res});
-  console.log("pre status: " + pre_status);
+  //console.log("pre status: " + pre_status);
 
   if(pre_status.includes(0)) {
 
-    let name = (document.getElementById("username").value).replace(/\s/g,'').replace(/[^a-z]/gi, '');
-    name = (name) ? name : "Astronaut";
+    _USERNAME_ = (document.getElementById("username").value).replace(/\s/g,'').replace(/[^a-z]/gi, '');
+    _USERNAME_ = (_USERNAME_) ? _USERNAME_ : "Astronaut";
     let animalSuffix = get_animal_suffix();
-    _FILE_NAME_ = name_builder(name, animalSuffix);
+    _FILE_NAME_ = name_builder(_USERNAME_, animalSuffix);
     
     //render status
     check_progress();
-    console.log(_SCREENSHOTS_PATH_);
     let m = await invoke("start_ffmpeg", {screenshotspath: _SCREENSHOTS_PATH_, filename: _FILE_NAME_}).then( (msg) => {return msg});
     console.log(m);
   }
@@ -116,7 +117,6 @@ async function check_progress() {
 
 async function set_screenshot_path() {
   _SCREENSHOTS_PATH_ = await get_screenshot_folder_path();
-  console.log(_SCREENSHOTS_PATH_);
 }
 
 async function set_video_export_path() {
@@ -124,7 +124,6 @@ async function set_video_export_path() {
   r.forEach((item) => {
     if(item.name === "Videos") {
       _VIDEO_PATH_ = item.path;
-      console.log(_VIDEO_PATH_);
     }
   })
 }
@@ -145,8 +144,6 @@ async function get_screenshot_folder_path(){
     }
     str += rev[i];
   }
-
-  console.log(str);
 
   return str;
 }
@@ -297,6 +294,7 @@ async function generate_frames() {
   _INTERVAL_FRAMES_ = await setInterval(looper, 250);
 }
 
-async function create_video() {
-
+async function generate_outro() {
+  document.getElementById('messages').prepend(await resourceDir());
+  await invoke("generate_outro", {username: _USERNAME_, filename: _FILE_NAME_});
 }

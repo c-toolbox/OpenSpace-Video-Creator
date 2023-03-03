@@ -14,62 +14,32 @@
     <div id="container" class="disconnected">
       <div id="connection-status" class="connection-status">Du måste starta OpenSpace 🔧</div>
     </div>
-    
     <div class='header'>
       <h2 id="renderStatus">OpenSpace Videoskapare</h2>
     </div>
-
     <div id="isConnected">  
-      
       <div class="card">
         Mitt namn är:  
         <input type="text" id="username">
       </div>
-
-      <!--
-            <div class="card">
-              <button onClick="set_ui_state(true)">Enable UI</button>
-              <button onClick="set_ui_state(false)">Disable UI</button>
-            </div>
-      -->
       <div class="card">
         <button onClick="start_recording()" id="startrecording">Starta inspelning</button>
         <button onClick="stop_recording()" id="stoprecording">Stoppa inspelning</button>
-      <!--
-        <label for="cars">Choose a car:</label>
-        <select name="recordings" id="recordings">
-          <option value="" disabled selected>empty</option>
-        </select>
-      -->
-      </div>
-
-<!--
-      <div class="card">
-        <div id="screenshotfolder">Current Screenshot folder:</div> 
-        <button onClick="open_screenshots_folder()">Open</button>
       </div>
       <div class="card">
-        <div id="videofolder">Current Video export folder:</div> 
-        <button onClick="open_video_folder()">Open</button>
-      </div>
--->
-
-    <div class="card">
         <button onClick="generate_frames()" id="ffmpeg_button">Skapa bildsekvens</button>
         <button onClick="start_ffmpeg()">Skapa video</button>
+        <button onClick="generate_outro()" id="DEV">DEV: Generate Outro</button>
       </div>    
     </div>
-    
     <div class="card" id="isDisconnected">
       Starta OpenSpace och försöka igen :
       <button onClick="connectToOpenSpace('localhost')">Anslut</button>
     </div>
-
     <div class="card">
       <h2>Logg</h2>
       <div id="messages"></div>
     </div>
-
     <script type="text/javascript">
       connectToOpenSpace('localhost');
       load_animals();

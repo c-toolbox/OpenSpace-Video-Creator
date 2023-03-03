@@ -7,8 +7,8 @@
     "withGlobalTauri": true
   },
   "package": {
-    "productName": "OpenSpace-Video-Exporter-Tauri",
-    "version": "0.0.0"
+    "productName": "OpenSpace Video Exporter",
+    "version": "0.1.0"
   },
   "tauri": {
     "allowlist": {
@@ -18,22 +18,17 @@
         "open": true
       },
       "fs": {
-        "all": true,
-        "readFile": true,
-        "writeFile": true,
         "readDir": true,
-        "copyFile": true,
-        "createDir": true,
-        "removeDir": true,
-        "removeFile": true,
-        "renameFile": true,
         "exists": true,
-        "scope": ["$TEMP", "$HOME", "$DESKTOP", "$VIDEO"]
+        "scope": ["$TEMP", "$HOME","$VIDEO", "$RESOURCE"]
       },
       "dialog": {
         "all": true,
         "open": true,
         "save": true
+      },
+      "path": {
+        "all": true
       }
     },
     "bundle": {
@@ -51,8 +46,8 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
-      "longDescription": "",
+      "identifier": "com.visc.spaceport",
+      "longDescription": "Video creation tool for OpenSpace to be used by Visualiseringscenter C",
       "macOS": {
         "entitlements": null,
         "exceptionDomain": "",
@@ -60,7 +55,7 @@
         "providerShortName": null,
         "signingIdentity": null
       },
-      "resources": [],
+      "resources": ["assets/outro.mp4", "assets/roboto.ttf"],
       "shortDescription": "",
       "targets": "all",
       "windows": {
@@ -78,9 +73,9 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 1000,
         "resizable": true,
-        "title": "OpenSpace-Video-Exporter-Tauri",
+        "title": "SpacePort",
         "width": 800
       }
     ]

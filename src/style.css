@@ -181,3 +181,11 @@ div#isConnected {
 div#isDisconnected {
   display: none;
 }
+
+button#dev {
+  background-color: #3277bc;
+}
+
+button:hover#dev {
+  background-color: #4b9ff4;
+}
