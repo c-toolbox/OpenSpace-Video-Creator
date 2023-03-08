@@ -5,44 +5,82 @@
     <link rel="stylesheet" type="text/css" href="style.css">
     <script type="text/javascript" src="openspace-api.js"></script>
     <script type="text/javascript" src="main.js"></script>
-    <script>
-      let ua = navigator.userAgent;
-      console.log(ua);
-    </script>
   </head>
   <body>
     <div id="container" class="disconnected">
       <div id="connection-status" class="connection-status">Du måste starta OpenSpace 🔧</div>
     </div>
     <div class='header'>
-      <h2 id="renderStatus">OpenSpace Videoskapare</h2>
+      <h2 id="welcomeMessage">Välkommen till OpenSpace Video Exporter</h2>
     </div>
     <div id="isConnected">  
       <div class="card">
-        Mitt namn är:  
-        <input type="text" id="username">
+        <p style="display: inline; font-size:large;">Namn:</p> 
+        <input type="text" id="username" onkeydown="return /[a-ö\s]/i.test(event.key)">
       </div>
       <div class="card">
-        <button onClick="start_recording()" id="startrecording">Starta inspelning</button>
+        <div id="flightdiv">
+          <p id="latestFlight" class="inline">Det finns inga inspelade flygningar</p>
+          <button class="folder" id="recordingsfolder" onClick="open_recordings_folder()"></button>
+        </div>
+        <button onClick="start_recording()" id="startrecording" class="animatedButton">Spela in ny flygtur</button>
         <button onClick="stop_recording()" id="stoprecording">Stoppa inspelning</button>
       </div>
       <div class="card">
-        <button onClick="generate_frames()" id="ffmpeg_button">Skapa bildsekvens</button>
-        <button onClick="start_ffmpeg()">Skapa video</button>
-        <button onClick="generate_outro()" id="DEV">DEV: Generate Outro</button>
+        <button id="createVideo" onClick="create_video()">Skapa video</button>
+      </div>
+      <div class="card">
+        <div>
+          <h2>Information</h2>
+        </div>
+        <div id="logbox"></div>
       </div>    
     </div>
     <div class="card" id="isDisconnected">
       Starta OpenSpace och försöka igen :
-      <button onClick="connectToOpenSpace('localhost')">Anslut</button>
-    </div>
-    <div class="card">
-      <h2>Logg</h2>
-      <div id="messages"></div>
+      <button onClick="connectToOpenSpace()">Anslut</button>
     </div>
     <script type="text/javascript">
-      connectToOpenSpace('localhost');
-      load_animals();
+      // Checks that program is running on a supported OS
+      // Shouldn't really be needed right now, but could be good if it's ever expanded to other platforms later
+      if(window.navigator.platform === "Win32") {
+        let ua = window.navigator.userAgent;
+        let str = ua.substring(ua.indexOf("(")+1, ua.indexOf(")"));
+        let parts = str.split(";");
+        let plat;
+        parts.forEach( e => { if(e.includes("NT")) { plat = Number(e.replace(/[^0-9\.]/gi, '')) } } );
+        if(plat < 6.1) {
+          // We don't support Windows older than Windows 7
+          document.getElementById("welcomeMessage").innerHTML = "";
+          document.getElementById("isDisconnected").innerHTML = "";
+          document.getElementById("isDisconnected").classList.remove("card");
+          document.getElementById("connection-status").innerHTML = "ERROR: Program only works on Windows 7 or newer"
+        } 
+        else {
+          // Request notification permissions
+          // NOTE: Support for Windows 7 requires specific build: https://tauri.app/v1/guides/building/windows#webview2-installation-options
+          //       The required package for Win7 Notifications has already been included (see "windows7-compat" in cargo.toml)
+          (async () => {
+            _NOTIFICATION_PERMISSION_GRANTED_ = await isPermissionGranted();
+            if (!_NOTIFICATION_PERMISSION_GRANTED_) {
+              const permission = await requestPermission();
+              _NOTIFICATION_PERMISSION_GRANTED_ = permission === 'granted';
+            }
+          })();
+
+          // Loads file with animal names
+          load_animals();
+
+          // Connects to OpenSpace api
+          connectToOpenSpace();
+        }
+      }
+      else {
+        document.getElementById("welcomeMessage").innerHTML = "";
+        document.getElementById("isDisconnected").innerHTML = "";
+        document.getElementById("isDisconnected").classList.remove("card");
+        document.getElementById("connection-status").innerHTML = "ERROR: Program only works on Windows"
+      }
     </script>
   </body>
 </html>

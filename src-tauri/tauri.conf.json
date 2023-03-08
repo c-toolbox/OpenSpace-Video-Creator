@@ -13,51 +13,29 @@
   "tauri": {
     "allowlist": {
       "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      },
       "fs": {
         "readDir": true,
-        "exists": true,
-        "scope": ["$TEMP", "$HOME","$VIDEO", "$RESOURCE"]
+        "scope": ["$HOME"]
       },
       "dialog": {
-        "all": true,
-        "open": true,
-        "save": true
+        "all": true
       },
-      "path": {
+      "notification": {
         "all": true
       }
     },
     "bundle": {
       "active": true,
-      "category": "DeveloperTool",
-      "copyright": "",
-      "deb": {
-        "depends": []
-      },
-      "externalBin": [],
+      "category": "Utility",
+      "copyright": "Owned by Visualiseringscenter C - NOT FOR DISTRIBUTION",
       "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
+        "icons/osvs.ico"
       ],
       "identifier": "com.visc.spaceport",
       "longDescription": "Video creation tool for OpenSpace to be used by Visualiseringscenter C",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
       "resources": ["assets/outro.mp4", "assets/roboto.ttf"],
       "shortDescription": "",
-      "targets": "all",
+      "targets": "msi",
       "windows": {
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",
@@ -73,10 +51,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 1000,
-        "resizable": true,
-        "title": "SpacePort",
-        "width": 800
+        "height": 800,
+        "resizable": false,
+        "title": "OpenSpace Video Exporter",
+        "width": 700
       }
     ]
   }
