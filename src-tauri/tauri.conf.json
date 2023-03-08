@@ -7,7 +7,7 @@
     "withGlobalTauri": true
   },
   "package": {
-    "productName": "OpenSpace Video Exporter",
+    "productName": "OpenSpace Video Creator",
     "version": "0.1.0"
   },
   "tauri": {
@@ -53,7 +53,7 @@
         "fullscreen": false,
         "height": 800,
         "resizable": false,
-        "title": "OpenSpace Video Exporter",
+        "title": "OpenSpace Video Creator",
         "width": 700
       }
     ]
