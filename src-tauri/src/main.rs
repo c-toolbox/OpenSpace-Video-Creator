@@ -25,8 +25,16 @@ async fn pre_ffmpeg() -> String {
 // Starts the ffmpeg command to create video from the generated frames
 // Returns the PID of the Powershell process
 #[tauri::command]
-async fn start_ffmpeg(screenshotspath: String) -> u32 {
-  let ffmpeg_code = "$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'; (echo Y | ffmpeg -framerate 60 -i '".to_owned() + &screenshotspath + "/OpenSpace_%06d.png' -c:v libx264 -pix_fmt yuv420p -s 1920x1080 -crf 23 $Env:temp/openspace_video.mp4 -hide_banner 1> $Env:temp/progress.space 2>&1)";
+async fn start_ffmpeg(screenshotspath: String, startindex: i32) -> u32 {
+  
+  let mut start_index_command = String::new();
+  if startindex > -1 {
+    start_index_command = "-start_number ".to_owned() + &startindex.to_string();
+  } 
+
+  println!("{}", start_index_command);
+
+  let ffmpeg_code = "$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'; (echo Y | ffmpeg -framerate 60 ".to_owned() + &start_index_command + " -i '" + &screenshotspath + "/OpenSpace_%06d.png' -c:v libx264 -pix_fmt yuv420p -s 1920x1080 -crf 23 $Env:temp/openspace_video.mp4 -hide_banner 1> $Env:temp/progress.space 2>&1)";
   let child = std::process::Command::new("powershell")
         .args(["-command", &ffmpeg_code])
         .creation_flags(0x08000000)
@@ -99,7 +107,7 @@ async fn get_latest_recording(path: String) -> Vec<String> {
         if let Ok(metadata) = entry.metadata() {
           let p = String::from(entry.path().display().to_string());
           let d = metadata.modified().unwrap().elapsed().unwrap();
-          if p.contains(".osrec") {
+          if entry.path().extension().unwrap().to_ascii_lowercase() == "osrec" {
             map.insert(p, d);
           }
         }
@@ -133,7 +141,7 @@ async fn nuke_screenshots_folder(screenshotfolderpath: String) {
       for entry in entries {
         if let Ok(entry) = entry {
           let filename = entry.path().file_name().unwrap().to_string_lossy().into_owned();
-          if entry.path().extension().unwrap().to_ascii_lowercase() == "png" && filename.contains("OpenSpace_") {
+          if entry.path().extension().unwrap().to_ascii_lowercase() == "png" && filename.starts_with("OpenSpace_") {
             if let Ok(_res) = std::fs::remove_file(entry.path()) {
               counter += 1;
             }
@@ -215,6 +223,25 @@ async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, fi
         .expect("Error exporting video with outro");
 }
 
+// Workaround for older OpenSpace versions (<19.0)
+#[tauri::command]
+async fn get_screenshot_names(screenshotfolderpath: String) -> Vec<String> {
+  let mut v: Vec<String> = vec![];
+  if !screenshotfolderpath.is_empty() {
+    if let Ok(entries) = std::fs::read_dir(screenshotfolderpath) {
+      for entry in entries {
+        if let Ok(entry) = entry {
+          let filename = entry.path().file_name().unwrap().to_string_lossy().into_owned();
+          if entry.path().extension().unwrap().to_ascii_lowercase() == "png" && filename.starts_with("OpenSpace_") {
+            v.push(filename);
+          }
+        }
+      }
+    }
+  }
+  return v;
+}
+
 // TAURI 
 fn main() {
   tauri::Builder::default()
@@ -222,7 +249,7 @@ fn main() {
         [
           start_ffmpeg, pre_ffmpeg, check_if_rendering, check_progress, 
           get_frame_count, open_fs, get_latest_recording, nuke_screenshots_folder,
-          clean_up, generate_outro_and_merge
+          clean_up, generate_outro_and_merge, get_screenshot_names
         ])
       .run(tauri::generate_context!())
       .expect("error while running tauri application");

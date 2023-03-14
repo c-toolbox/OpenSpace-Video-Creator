@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "OpenSpace Video Creator",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "tauri": {
     "allowlist": {
@@ -54,7 +54,7 @@
         "height": 800,
         "resizable": false,
         "title": "OpenSpace Video Creator",
-        "width": 700
+        "width": 600
       }
     ]
   }

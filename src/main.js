@@ -8,6 +8,7 @@ _RECORDINGS_PATH_ = "";
 _ANIMALS_ = null;
 openspace = null;
 _ANIMAL_SUFFIX_ = "";
+_STARTING_INDEX_ = Number.MAX_SAFE_INTEGER;
 
 // States
 READY = 0;
@@ -58,7 +59,7 @@ let connectToOpenSpace = () => {
 async function start_ffmpeg() {
   let pre_status = await invoke("pre_ffmpeg").then( (res) => {return res});
   if(pre_status.includes(0)) {    
-    return await invoke("start_ffmpeg", {screenshotspath: _SCREENSHOTS_PATH_}).then( (msg) => {return msg});
+    return await invoke("start_ffmpeg", {screenshotspath: _SCREENSHOTS_PATH_, startindex: (_STARTING_INDEX_ == Number.MAX_SAFE_INTEGER) ? -1 : _STARTING_INDEX_ }).then( (msg) => {return msg});
   }
   else {
     console.log("Error: Something went wrong in pre_ffmpeg");
@@ -349,7 +350,16 @@ async function generate_frames() {
   await invoke("nuke_screenshots_folder", {screenshotfolderpath: _SCREENSHOTS_PATH_});
 
   // Reset screenshot counter
-  await openspace.resetScreenshotNumber();
+  let DID_RESET = false;
+  try {
+    // Try using API, but if User is using older OpenSpace version we do fallback
+    await openspace.resetScreenshotNumber();
+    DID_RESET = true;
+    _STARTING_INDEX_ = Number.MAX_SAFE_INTEGER;
+  } catch (e) {
+    DID_RESET = false;
+  }
+  
 
   // Turns of UI and starts rendering of frames
   await set_openspace_ui_state(false);
@@ -359,6 +369,21 @@ async function generate_frames() {
   while(true) {
     let isplaying = (await openspace.sessionRecording.isPlayingBack())[1];
     if (!isplaying) {
+      if(!DID_RESET) {
+        // resetScreenshotNumber function did not exist, do workaround for older OpenSpace versions
+        let files = await invoke("get_screenshot_names", {screenshotfolderpath: _SCREENSHOTS_PATH_});
+        let reg = /((^OpenSpace_))(([0-9]{6}))(.png$)/g
+    
+        files.forEach( f => {
+          if(f.match(reg)) {
+            let n = Number(f.replace(/\D/g, ''));
+            if (n < _STARTING_INDEX_) {
+              _STARTING_INDEX_ = n;
+            }
+          }
+        });
+      }
+
       await set_openspace_ui_state(true);
       document.getElementById('container').classList.remove("generating");
       return;
@@ -375,7 +400,6 @@ async function generate_outro_and_merge() {
 
   // Gets the Username and animal+randomNumber in order to create the final video name
   let name = document.getElementById("username").value.replace(/[^a-ö\s]/gi, '');
-  console.log(name);
   let prefix = (name) ? name.replace(/\s/g,'') : name = "Astronaut";
   let filename = name_builder(prefix, _ANIMAL_SUFFIX_);
 
