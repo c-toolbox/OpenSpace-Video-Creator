@@ -9,8 +9,10 @@
 use std::{os::windows::process::CommandExt};
 
 
-// Creates file used for ffmpeg output
-// Returns Powershell command execution status
+/*
+* Creates file used for ffmpeg output
+* Returns Powershell command execution status
+*/
 #[tauri::command]
 async fn pre_ffmpeg() -> String {
   let create_indication_file = "New-Item $Env:temp/progress.space -Force";
@@ -22,8 +24,12 @@ async fn pre_ffmpeg() -> String {
   return (out_cif.status).to_string();
 }
 
-// Starts the ffmpeg command to create video from the generated frames
-// Returns the PID of the Powershell process
+
+
+/*
+* Starts the ffmpeg command to create video from the generated frames
+* Returns the PID of the Powershell process
+*/
 #[tauri::command]
 async fn start_ffmpeg(screenshotspath: String, startindex: i32) -> u32 {
   
@@ -43,9 +49,13 @@ async fn start_ffmpeg(screenshotspath: String, startindex: i32) -> u32 {
   return child.id();
 }
 
-// Removes temporary log files, etc
+
+
+/*
+* Removes temporary log files, etc
+*/
 #[tauri::command]
-async fn clean_up(){
+async fn clean_up(screenshotfolderpath: String) {
   // Remove progress.space file
   std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/progress.space").err();
 
@@ -53,6 +63,9 @@ async fn clean_up(){
   std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/named_outro.mp4").err();
   std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/openspace_video.mp4").err();
   std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/list.space").err();
+
+  // Cleans up all old screenshots
+  nuke_screenshots_folder(screenshotfolderpath);
 }
 
 // Checks if the ffmpeg command is still running by querying if the PID is still alive
@@ -96,9 +109,13 @@ async fn open_fs(path: String) {
   .unwrap( );
 }
 
-// Finds the latest openspace recording (.osrec) in a given path
+
+
+/*
+* Returns all recordings (to be filtered on the JS side)
+*/ 
 #[tauri::command]
-async fn get_latest_recording(path: String) -> Vec<String> {
+async fn get_all_recordings(path: String) -> Vec<Vec<String>> {
   let mut map: std::collections::HashMap<String, std::time::Duration> = std::collections::HashMap::new();
 
   if let Ok(entries) = std::fs::read_dir(&path) {
@@ -115,25 +132,22 @@ async fn get_latest_recording(path: String) -> Vec<String> {
     }
   }
 
-  let mut retpath = String::new();
-  let mut rettime: std::time::Duration = std::time::Duration::from_secs(std::u64::MAX);
+  let mut retvec = vec![];
 
   for(k,v) in map.iter() {
-    if rettime > *v {
-      rettime = *v;
-      retpath = (&k).to_string();
-    }
+    retvec.push(vec![(&k).to_string(), (*v).as_millis().to_string()]);
   }
-  
-  let retvec = vec![retpath, rettime.as_millis().to_string()];
 
   return retvec;
 }
 
-// Removes all openspace screenshots for a given path.
-// (checks if extention is png and if contains openspace_ in the file name)
-#[tauri::command]
-async fn nuke_screenshots_folder(screenshotfolderpath: String) {
+
+
+/*
+* Removes all openspace screenshots for a given path.
+* (checks if extention is png and if contains openspace_ in the file name)
+*/
+fn nuke_screenshots_folder(screenshotfolderpath: String) {
   let mut counter = 0;
 
   if !screenshotfolderpath.is_empty() {
@@ -152,13 +166,27 @@ async fn nuke_screenshots_folder(screenshotfolderpath: String) {
   }
 
   println!("Deleted {} number of files", counter);
-
 }
 
-// Function that generates the outro video with the User's name in it and then merges that with
-// the previously generated video based on the recorded flight
+
+
+/*
+* Generates the outro video with the User's name in it and then merges that with
+* the previously generated video based on the recorded flight
+*/
 #[tauri::command] 
-async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, filename: String, date: String) {
+async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, filename: String, date: String, flag: bool) {
+
+  // If flag is true, we skip outro and just move the generated video to User Video folder
+  if flag {
+    let mv = "Move-Item $Env:temp/openspace_video.mp4 ".to_owned() + "$HOME/Videos/" + &filename + " -force";
+    std::process::Command::new("powershell")
+          .args(["-command", &mv])
+          .creation_flags(0x08000000)
+          .output()
+          .expect("Error exporting video with outro");
+    return;
+  }
 
   // Get asset path for outro-mp4 and robot.ttf
   let outro_path = (handle.path_resolver()
@@ -242,14 +270,16 @@ async fn get_screenshot_names(screenshotfolderpath: String) -> Vec<String> {
   return v;
 }
 
+
+
 // TAURI 
 fn main() {
   tauri::Builder::default()
       .invoke_handler(tauri::generate_handler!
         [
           start_ffmpeg, pre_ffmpeg, check_if_rendering, check_progress, 
-          get_frame_count, open_fs, get_latest_recording, nuke_screenshots_folder,
-          clean_up, generate_outro_and_merge, get_screenshot_names
+          get_frame_count, open_fs, clean_up, generate_outro_and_merge, 
+          get_screenshot_names, get_all_recordings
         ])
       .run(tauri::generate_context!())
       .expect("error while running tauri application");

@@ -8,7 +8,9 @@
   </head>
   <body>
     <div id="container" class="disconnected">
-      <div id="connection-status" class="connection-status">Du måste starta OpenSpace 🔧</div>
+      <div id="connection-status" class="connection-status">Försöker att ansluta till OpenSpace...
+        <picture id="wrench"></picture>
+      </div>
     </div>
     <div class='header'>
       <h2 id="welcomeMessage">Välkommen till OpenSpace Video Creator</h2>
@@ -16,18 +18,27 @@
     <div id="isConnected">  
       <div class="card">
         <p style="display: inline; font-size:large;">Namn:</p> 
-        <input type="text" id="username" onkeydown="return /[a-ö\s]/i.test(event.key)">
+        <input type="text" id="username" class="interactives" onkeydown="return /[a-ö\s]/i.test(event.key)">
       </div>
       <div class="card">
         <div id="flightdiv">
           <p id="latestFlight" class="inline">Det finns inga inspelade flygningar</p>
-          <button class="folder" id="recordingsfolder" onClick="open_recordings_folder()"></button>
+          <select id="doprdown_flights" class="interactives">
+
+          </select>
+          <button class="legacyfolder" id="recordingsfolder" onClick="open_recordings_folder()"></button>
         </div>
-        <button onClick="start_recording()" id="startrecording" class="animatedButton">Spela in ny flygtur</button>
-        <button onClick="stop_recording()" id="stoprecording">Stoppa inspelning</button>
+        <button onClick="start_recording()" id="startrecording" class="interactives">Spela in ny flygtur</button>
+        <button onClick="stop_recording()" id="stoprecording" class="interactives">Stoppa inspelning</button>
+        <button onClick="start_playback()" id="startplayback" class="interactives">Spela upp flygtur</button>
+        <button onClick="stop_playback()" id="stopplayback" class="interactives">Stoppa flygning</button>
       </div>
       <div class="card">
-        <button id="createVideo" onClick="create_video()">Skapa video</button>
+        <button onClick="create_video()" id="createVideo" class="interactives">Skapa video</button>
+        <div id="easteregg" class="inline" style="display:none;">
+          <input type="checkbox" id="removeoutro" name="removeoutro" class="interactives">
+          <label for="removeoutro"> Remove Outro</label><br>
+        </div>
       </div>
       <div class="card">
         <div>
@@ -44,12 +55,15 @@
       // Checks that program is running on a supported OS
       // Shouldn't really be needed right now, but could be good if it's ever expanded to other platforms later
       if(window.navigator.platform === "Win32") {
+        let WIN7_NT = 6.1;
+
         let ua = window.navigator.userAgent;
         let str = ua.substring(ua.indexOf("(")+1, ua.indexOf(")"));
         let parts = str.split(";");
         let plat;
+
         parts.forEach( e => { if(e.includes("NT")) { plat = Number(e.replace(/[^0-9\.]/gi, '')) } } );
-        if(plat < 6.1) {
+        if(plat < WIN7_NT) {
           // We don't support Windows older than Windows 7
           document.getElementById("welcomeMessage").innerHTML = "";
           document.getElementById("isDisconnected").innerHTML = "";
@@ -81,6 +95,27 @@
         document.getElementById("isDisconnected").classList.remove("card");
         document.getElementById("connection-status").innerHTML = "ERROR: Program only works on Windows"
       }
+    </script>
+    <script>
+      _EASTER_EGG_ = [];
+      document.body.addEventListener('keydown', function (k) {
+        let code = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65, 13];
+        _EASTER_EGG_.push(k.keyCode);
+        if(_EASTER_EGG_.length > 11) {
+          _EASTER_EGG_.shift();
+        }
+
+        if(_EASTER_EGG_.length == code.length) {
+          _EASTER_EGG_.forEach( (e,i) => {
+            if(e !== code[i]) {
+              return;
+            }
+            if(i == code.length-1) {
+              document.getElementById("easteregg").style.display = "inline";
+            }
+          });
+        }
+      });
     </script>
   </body>
 </html>

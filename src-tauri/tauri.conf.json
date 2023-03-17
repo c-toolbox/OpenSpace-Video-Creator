@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "OpenSpace Video Creator",
-    "version": "0.1.1"
+    "version": "0.2.0"
   },
   "tauri": {
     "allowlist": {
@@ -22,6 +22,13 @@
       },
       "notification": {
         "all": true
+      },
+      "path": {
+        "all": true
+      },
+      "protocol": {
+        "asset": true,
+        "assetScope": ["**"]
       }
     },
     "bundle": {
@@ -29,17 +36,18 @@
       "category": "Utility",
       "copyright": "Owned by Visualiseringscenter C - NOT FOR DISTRIBUTION",
       "icon": [
-        "icons/osvs.ico"
+        "icons/osvc.ico"
       ],
-      "identifier": "com.visc.spaceport",
+      "identifier": "com.visualiseringscenterc.osvc",
       "longDescription": "Video creation tool for OpenSpace to be used by Visualiseringscenter C",
-      "resources": ["assets/outro.mp4", "assets/roboto.ttf"],
+      "resources": ["assets/outro.mp4", "assets/roboto.ttf", "assets/*.png"],
       "shortDescription": "",
       "targets": "msi",
+      "publisher": "Visualiseringscenter C",
       "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
+        "wix": {
+          "language": "sv-SE"
+        }
       }
     },
     "security": {
@@ -51,7 +59,7 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 800,
+        "height": 750,
         "resizable": false,
         "title": "OpenSpace Video Creator",
         "width": 600
