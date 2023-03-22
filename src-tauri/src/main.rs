@@ -31,16 +31,16 @@ async fn pre_ffmpeg() -> String {
 * Returns the PID of the Powershell process
 */
 #[tauri::command]
-async fn start_ffmpeg(screenshotspath: String, startindex: i32) -> u32 {
+async fn start_ffmpeg(screenshotspath: String, framerate: u32, startindex: i32) -> u32 {
   
   let mut start_index_command = String::new();
   if startindex > -1 {
-    start_index_command = "-start_number ".to_owned() + &startindex.to_string();
+    start_index_command = " -start_number ".to_owned() + &startindex.to_string();
   } 
 
   println!("{}", start_index_command);
 
-  let ffmpeg_code = "$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'; (echo Y | ffmpeg -framerate 60 ".to_owned() + &start_index_command + " -i '" + &screenshotspath + "/OpenSpace_%06d.png' -c:v libx264 -pix_fmt yuv420p -s 1920x1080 -crf 23 $Env:temp/openspace_video.mp4 -hide_banner 1> $Env:temp/progress.space 2>&1)";
+  let ffmpeg_code = "$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'; (echo Y | ffmpeg -framerate ".to_owned() + &framerate.to_string() + &start_index_command + " -i '" + &screenshotspath + "/OpenSpace_%06d.png' -c:v libx264 -pix_fmt yuv420p -s 1920x1080 -crf 17 $Env:temp/openspace_video.mp4 -hide_banner 1> $Env:temp/progress.space 2>&1)";
   let child = std::process::Command::new("powershell")
         .args(["-command", &ffmpeg_code])
         .creation_flags(0x08000000)
@@ -175,7 +175,7 @@ fn nuke_screenshots_folder(screenshotfolderpath: String) {
 * the previously generated video based on the recorded flight
 */
 #[tauri::command] 
-async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, filename: String, date: String, flag: bool) {
+async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, filename: String, date: String, framerate: u32, flag: bool) {
 
   // If flag is true, we skip outro and just move the generated video to User Video folder
   if flag {
@@ -188,10 +188,18 @@ async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, fi
     return;
   }
 
-  // Get asset path for outro-mp4 and robot.ttf
-  let outro_path = (handle.path_resolver()
-  .resolve_resource("assets/outro.mp4")
-  .expect("failed to resolve resource")).canonicalize().unwrap().to_string_lossy().into_owned();
+  // Get asset path for outro.mp4 (30 or 60 fps) and robot.ttf
+  let outro_path;
+  if framerate == 30 {
+    outro_path = (handle.path_resolver()
+    .resolve_resource("assets/outro_30fps.mp4")
+    .expect("failed to resolve resource")).canonicalize().unwrap().to_string_lossy().into_owned();
+  }
+  else {
+    outro_path = (handle.path_resolver()
+    .resolve_resource("assets/outro_60fps.mp4")
+    .expect("failed to resolve resource")).canonicalize().unwrap().to_string_lossy().into_owned();
+  }
 
   let mut font_path = (handle.path_resolver()
   .resolve_resource("assets/roboto.ttf")
@@ -251,7 +259,26 @@ async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, fi
         .expect("Error exporting video with outro");
 }
 
-// Workaround for older OpenSpace versions (<19.0)
+
+
+/*
+* Kills the running PID for any stage
+*/
+#[tauri::command]
+async fn abort(pid: u32) {
+  let cmd = "kill ".to_owned() + &pid.to_string();
+  std::process::Command::new("powershell")
+        .args(["-command", &cmd])
+        .creation_flags(0x08000000)
+        .spawn()
+        .expect("Error");
+}
+
+
+
+/*
+* Workaround for older OpenSpace versions (<19.0)
+*/
 #[tauri::command]
 async fn get_screenshot_names(screenshotfolderpath: String) -> Vec<String> {
   let mut v: Vec<String> = vec![];
@@ -272,6 +299,57 @@ async fn get_screenshot_names(screenshotfolderpath: String) -> Vec<String> {
 
 
 
+/*
+* Checks if ffmpeg exists
+*/
+#[tauri::command]
+async fn check_ffmpeg_exists() -> bool {
+  let cmd = "ffmpeg";
+  let q = std::process::Command::new("powershell")
+        .args(["-command", &cmd])
+        .creation_flags(0x08000000)
+        .output()
+        .expect("Error");
+
+  let res = std::str::from_utf8(&q.stderr).unwrap();
+
+  return !res.contains("is not recognized");
+}
+
+
+
+/*
+* Get openspace.exe path (used to get installation folder)
+*/
+#[tauri::command]
+async fn get_exec_path() -> String {
+  let cmd = "(Get-Process | Where {$_.Name -eq 'openspace'} | Select-Object -ExpandProperty Path)";
+  let q = std::process::Command::new("powershell")
+        .args(["-command", &cmd])
+        .creation_flags(0x08000000)
+        .output()
+        .expect("Error");
+
+  let res = std::str::from_utf8(&q.stdout).unwrap();
+
+  return String::from(res);
+}
+
+
+
+/*
+* Get openspace.exe path (used to get installation folder)
+*/
+#[tauri::command]
+async fn get_content_as_string(path: String) -> String {
+  let contents = std::fs::read_to_string(path)
+    .expect("Should have been able to read the file");
+
+  return contents;
+}
+
+
+
 // TAURI 
 fn main() {
   tauri::Builder::default()
@@ -279,7 +357,8 @@ fn main() {
         [
           start_ffmpeg, pre_ffmpeg, check_if_rendering, check_progress, 
           get_frame_count, open_fs, clean_up, generate_outro_and_merge, 
-          get_screenshot_names, get_all_recordings
+          get_screenshot_names, get_all_recordings, abort, check_ffmpeg_exists,
+          get_exec_path, get_content_as_string
         ])
       .run(tauri::generate_context!())
       .expect("error while running tauri application");

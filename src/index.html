@@ -7,6 +7,9 @@
     <script type="text/javascript" src="main.js"></script>
   </head>
   <body>
+    <div id="overlay">
+      <p id="overlaytext">Hejdå</p>
+    </div>
     <div id="container" class="disconnected">
       <div id="connection-status" class="connection-status">Försöker att ansluta till OpenSpace...
         <picture id="wrench"></picture>
@@ -17,13 +20,13 @@
     </div>
     <div id="isConnected">  
       <div class="card">
-        <p style="display: inline; font-size:large;">Namn:</p> 
+        <p class="static" style="display: inline; font-size:large;">Namn:</p> 
         <input type="text" id="username" class="interactives" onkeydown="return /[a-ö\s]/i.test(event.key)">
       </div>
       <div class="card">
         <div id="flightdiv">
-          <p id="latestFlight" class="inline">Det finns inga inspelade flygningar</p>
-          <select id="doprdown_flights" class="interactives">
+          <p id="latestFlight" class="inline static">Det finns inga inspelade flygningar</p>
+          <select id="dropdown_flights" class="interactives">
 
           </select>
           <button class="legacyfolder" id="recordingsfolder" onClick="open_recordings_folder()"></button>
@@ -32,12 +35,18 @@
         <button onClick="stop_recording()" id="stoprecording" class="interactives">Stoppa inspelning</button>
         <button onClick="start_playback()" id="startplayback" class="interactives">Spela upp flygtur</button>
         <button onClick="stop_playback()" id="stopplayback" class="interactives">Stoppa flygning</button>
+        <div class="inline easteregg" style="display:none;">
+          <input type="checkbox" id="timelimit" name="timelimit" class="interactives">
+          <label for="timelimit">Remove time limit</label><br>
+        </div>
       </div>
       <div class="card">
         <button onClick="create_video()" id="createVideo" class="interactives">Skapa video</button>
-        <div id="easteregg" class="inline" style="display:none;">
+        <button onClick="abort()" id="abort">Avbryt videoskapande</button>
+        <div class="inline easteregg" style="display:none;">
+          <select id="dropdown_fps" class="interactives"></select>
           <input type="checkbox" id="removeoutro" name="removeoutro" class="interactives">
-          <label for="removeoutro"> Remove Outro</label><br>
+          <label for="removeoutro"> Remove outro</label><br>
         </div>
       </div>
       <div class="card">
@@ -97,23 +106,34 @@
       }
     </script>
     <script>
-      _EASTER_EGG_ = [];
+      _INPUT_CODE_ = [];
       document.body.addEventListener('keydown', function (k) {
         let code = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65, 13];
-        _EASTER_EGG_.push(k.keyCode);
-        if(_EASTER_EGG_.length > 11) {
-          _EASTER_EGG_.shift();
+        _INPUT_CODE_.push(k.keyCode);
+        if(_INPUT_CODE_.length > 11) {
+          _INPUT_CODE_.shift();
         }
 
-        if(_EASTER_EGG_.length == code.length) {
-          _EASTER_EGG_.forEach( (e,i) => {
+        if(_INPUT_CODE_.length == code.length) {
+          _INPUT_CODE_.forEach( (e,i) => {
             if(e !== code[i]) {
               return;
             }
             if(i == code.length-1) {
-              document.getElementById("easteregg").style.display = "inline";
+              alert("Warning: removing the time limit or using 60 fps will drasticly increase the required disk space");
+              [...document.getElementsByClassName("easteregg")].forEach( e => {
+                e.style.display = "inline";
+              });
             }
           });
+        }
+      });
+    </script>
+    <script>
+      document.addEventListener('keydown', (e) => {
+        e = e || window.event;
+        if(e.keyCode == 116 || (e.ctrlKey && e.keyCode == 82)){
+            e.preventDefault();
         }
       });
     </script>

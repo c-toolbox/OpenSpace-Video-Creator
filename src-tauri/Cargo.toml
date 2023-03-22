@@ -1,6 +1,6 @@
 [package]
 name = "openspace_video_creator"
-version = "0.2.0"
+version = "1.0.0"
 description = "Video Creation Tool - To be used at Visualiseringscenter C"
 authors = ["Adam Rohdin @ OpenSpace"]
 license = "© Visualiseringscenter C"
@@ -15,7 +15,7 @@ tauri-build = { version = "1.2", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.2", features = ["dialog-all", "fs-read-dir", "notification-all", "path-all", "protocol-asset", "windows7-compat"] }
+tauri = { version = "1.2", features = ["dialog-all", "fs-read-dir", "notification-all", "path-all", "protocol-asset", "window-all", "windows7-compat"] }
 
 [features]
 # by default Tauri runs in production mode

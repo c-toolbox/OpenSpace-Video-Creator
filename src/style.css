@@ -17,6 +17,25 @@ body {
   margin: 1.5em;
 }
 
+#overlay {
+  display: none;
+  position: absolute;
+  background: transparent;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  z-index: 99;
+}
+
+#overlaytext {
+  color: transparent;
+  display: none;
+  background: transparent;
+  font-size: xx-large;
+  text-align: center;
+}
+
 input[type=text] {
   padding:5px;
   border:1px solid #ccc;
@@ -113,22 +132,27 @@ div.disconnected button:hover {
 
 h2 {
   margin-top: 0;
+  user-select: none;
+}
+
+p.static {
+  user-select: none;
 }
 
 button:enabled:hover {
   background-color: #0a0;
 }
 
-button#stoprecording {
+button#stoprecording, button#stopplayback, button#abort {
   background-color: #800;
   display: none;
 }
 
-button:hover#stoprecording {
+button:hover#stoprecording, button:hover#stopplayback, button:hover#abort {
   background-color: #c60000
 }
 
-button:disabled#stoprecording  {
+button:disabled#stoprecording, button:disabled#stopplayback, button:disabled#abort {
   background-color: #777;
   color: #ccc;
 }
@@ -248,23 +272,7 @@ button:disabled#startplayback  {
   color: #ccc;
 }
 
-button#stopplayback {
-  display: none;
-  background: #800;
-  margin: 0;
-}
-
-button:enabled:hover#stopplayback {
-  background-color: #c60000;
-}
-
-button:disabled#stopplayback  {
-  background-color: #777;
-  color: #ccc;
-}
-
-
-select#doprdown_flights {
+select#dropdown_flights {
   background: transparent;
   transition: all 0.5s;
   color: #efe;

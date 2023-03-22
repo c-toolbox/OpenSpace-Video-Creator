@@ -8,11 +8,14 @@
   },
   "package": {
     "productName": "OpenSpace Video Creator",
-    "version": "0.2.0"
+    "version": "1.0.0"
   },
   "tauri": {
     "allowlist": {
       "all": false,
+      "window": {
+        "all": true
+      },
       "fs": {
         "readDir": true,
         "scope": ["$HOME"]
@@ -40,7 +43,7 @@
       ],
       "identifier": "com.visualiseringscenterc.osvc",
       "longDescription": "Video creation tool for OpenSpace to be used by Visualiseringscenter C",
-      "resources": ["assets/outro.mp4", "assets/roboto.ttf", "assets/*.png"],
+      "resources": ["assets/outro_30fps.mp4", "assets/outro_60fps.mp4", "assets/roboto.ttf", "assets/*.png"],
       "shortDescription": "",
       "targets": "msi",
       "publisher": "Visualiseringscenter C",
