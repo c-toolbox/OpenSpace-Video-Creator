@@ -1,6 +1,6 @@
 [package]
 name = "openspace_video_creator"
-version = "1.0.0"
+version = "1.0.1"
 description = "Video Creation Tool - To be used at Visualiseringscenter C"
 authors = ["Adam Rohdin @ OpenSpace"]
 license = "© Visualiseringscenter C"

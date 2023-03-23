@@ -92,7 +92,6 @@ let connectToOpenSpace = async () => {
       });
       (async () => {
         for await (const data of _topic_.iterator()) {
-          console.log(data);
           if(data.state === "idle" && _RECORDING_INTERVAL_ !== null) {
             stop_recording();
           }
@@ -100,39 +99,48 @@ let connectToOpenSpace = async () => {
       })();
     };
 
-    // Check OpenSpace version
-    let path = await invoke("get_exec_path");
-    path.replaceAll("\\", "/");
-    path = path.slice(0, path.indexOf('bin'));
-    path += "/logs/log.html";
-
-    let logfilecontents = await invoke("get_content_as_string", {path: path});
-    let start = logfilecontents.indexOf("log-message", logfilecontents.indexOf("OpenSpace Version")) + 13;
-    let end = logfilecontents.indexOf("</td>", start);
-    let majorminorpatch = logfilecontents.substring(start,end).split(" ")[0];
-    
-    let result = majorminorpatch.localeCompare(MINIMUM_OPENSPACE_VERSION, undefined, { numeric: true, sensitivity: 'base' });
-    if(result < 0) {
-      enable_overlay("#d70000", "Uppdatera Openspace \n Du måste ha OpenSpace 0.17.0 eller nyare", "yellow", "x-large", 0.0);
-      return;
-    }
-
     try {
+      openspace = await API.library();
+
+      // Check OpenSpace version
+      let majorminorpatch = "";
+      try {
+        majorminorpatch = Object.values((await openspace.version())[1].Version).join(".");
+      } catch {
+        let path = await invoke("get_exec_path");
+        path.replaceAll("\\", "/");
+        path = path.slice(0, path.indexOf('bin'));
+        path += "/logs/log.html";
+
+        let logfilecontents = await invoke("get_content_as_string", {path: path});
+        let start = logfilecontents.indexOf("log-message", logfilecontents.indexOf("OpenSpace Version")) + 13;
+        let end = logfilecontents.indexOf("</td>", start);
+        majorminorpatch = logfilecontents.substring(start,end).split(" ")[0];
+      } finally {
+        let result = majorminorpatch.localeCompare(MINIMUM_OPENSPACE_VERSION, undefined, { numeric: true, sensitivity: 'base' });
+        if(result < 0) {
+          enable_overlay("#d70000", "Uppdatera Openspace \n Du måste ha OpenSpace 0.17.0 eller nyare", "yellow", "x-large", 0.0);
+          return;
+        }
+      }
+
       // Enables sessionRecording listener
       subscribe();
 
+      // Get framerates and add them to (hidden) list
       for(let key in FRAMERATES) {
         let opt = document.createElement("option");
         opt.text = `${FRAMERATES[key]} fps`;
         opt.value = FRAMERATES[key];
         document.getElementById("dropdown_fps").append(opt);
       }
-
-      openspace = await API.library();
+      
+      // Set som initial variables
       await set_screenshot_path();
       await set_video_export_path();
       await set_recordings_path();
       await set_state(READY);
+
       console.log('connected');
     } 
     catch (e) {
