@@ -1,10 +1,7 @@
 ## Information
 
-_How-To-Use information is in main README_
+Run script `build_and_package_installer.ps1` to build the Tauri project and then get a .zip containing the installation file.
 
-The installation script `RUN_AS_ADMIN.bat` installs both ffmpeg and OpenSpace Video Creator (OSVC).
 
-For OSVC to be installed the installation file (.msi) needs to be added to this folder with name: `OpenSpace_Video_Creator.msi`.
-
-ffmpeg is installed via winget from this source: https://www.gyan.dev/ffmpeg/builds/
-- gyan.dev is mentioned on official ffmpeg website: https://ffmpeg.org/download.html#build-windows
+**NOTE:**
+New for version 1.1.0 - We are now packaging ffmpeg with OSVC in order to mitigate any configuration issues when doing the ffmpeg installation separately.

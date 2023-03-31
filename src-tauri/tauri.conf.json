@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "OpenSpace Video Creator",
-    "version": "1.0.1"
+    "version": "1.1.0"
   },
   "tauri": {
     "allowlist": {
@@ -32,18 +32,21 @@
       "protocol": {
         "asset": true,
         "assetScope": ["**"]
+      },
+      "shell": {
+        "open": true
       }
     },
     "bundle": {
       "active": true,
       "category": "Utility",
-      "copyright": "Owned by Visualiseringscenter C - NOT FOR DISTRIBUTION",
+      "copyright": "MIT",
       "icon": [
         "icons/osvc.ico"
       ],
       "identifier": "com.visualiseringscenterc.osvc",
-      "longDescription": "Video creation tool for OpenSpace to be used by Visualiseringscenter C",
-      "resources": ["assets/outro_30fps.mp4", "assets/outro_60fps.mp4", "assets/roboto.ttf", "assets/*.png"],
+      "longDescription": "Video creation tool for OpenSpace to be used by Visualiseringscenter C during workshops for school",
+      "resources": ["assets/outro_30fps.mp4", "assets/outro_60fps.mp4", "assets/roboto.ttf", "assets/*.png", "assets/ffmpeg.exe"],
       "shortDescription": "",
       "targets": "msi",
       "publisher": "Visualiseringscenter C",

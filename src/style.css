@@ -12,9 +12,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.header {
+#header {
   color: #fff;
-  margin: 1.5em;
+  margin: 1.75em 1.5em 1em 1.5em;
 }
 
 #overlay {
@@ -60,6 +60,7 @@ input[type=text]:disabled {
   height: 30px;
   width: calc(100% - 1em);
   padding: 0.5em;
+  user-select: none;
 }
 
 div.disconnected .connection-status {
@@ -132,6 +133,7 @@ div.disconnected button:hover {
 
 h2 {
   margin-top: 0;
+  margin-bottom: 0;
   user-select: none;
 }
 
@@ -236,7 +238,7 @@ button.legacyfolder {
 div#logbox {
   overflow-y: scroll;
   overflow-x: hidden;
-  height: 230;
+  height: 250;
 }
 
 ::-webkit-scrollbar {
@@ -292,4 +294,24 @@ option {
   z-index: 1;
   border-radius: 0px;
   color: black;
+}
+
+#appversion { 
+  position: absolute; 
+  right: 20px; 
+  bottom: -15px;
+  color: #949494;
+}
+
+#ffmpegcredit {
+  position: absolute; 
+  left: 20px; 
+  bottom: -15px;
+  color: #949494; 
+}
+
+#maincontent {
+  position: absolute; 
+  top: 50px; 
+  width: 100%;
 }

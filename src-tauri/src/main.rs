@@ -31,16 +31,18 @@ async fn pre_ffmpeg() -> String {
 * Returns the PID of the Powershell process
 */
 #[tauri::command]
-async fn start_ffmpeg(screenshotspath: String, framerate: u32, startindex: i32) -> u32 {
-  
+async fn start_ffmpeg(handle: tauri::AppHandle, screenshotspath: String, framerate: u32, startindex: i32) -> u32 {
+  let ffmpeg_path = handle.path_resolver()
+      .resolve_resource("assets/ffmpeg.exe")
+      .expect("failed to resolve ffmpeg path")
+      .canonicalize().unwrap().to_string_lossy().into_owned();
+
   let mut start_index_command = String::new();
   if startindex > -1 {
     start_index_command = " -start_number ".to_owned() + &startindex.to_string();
   } 
 
-  println!("{}", start_index_command);
-
-  let ffmpeg_code = "$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'; (echo Y | ffmpeg -framerate ".to_owned() + &framerate.to_string() + &start_index_command + " -i '" + &screenshotspath + "/OpenSpace_%06d.png' -c:v libx264 -pix_fmt yuv420p -s 1920x1080 -crf 17 $Env:temp/openspace_video.mp4 -hide_banner 1> $Env:temp/progress.space 2>&1)";
+  let ffmpeg_code = "$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'; (echo Y | ".to_owned() + &ffmpeg_path + " -framerate " + &framerate.to_string() + &start_index_command + " -i '" + &screenshotspath + "/OpenSpace_%06d.png' -c:v libx264 -pix_fmt yuv420p -s 1920x1080 -crf 17 $Env:temp/openspace_video.mp4 -hide_banner 1> $Env:temp/progress.space 2>&1)";
   let child = std::process::Command::new("powershell")
         .args(["-command", &ffmpeg_code])
         .creation_flags(0x08000000)
@@ -68,7 +70,11 @@ async fn clean_up(screenshotfolderpath: String) {
   nuke_screenshots_folder(screenshotfolderpath);
 }
 
-// Checks if the ffmpeg command is still running by querying if the PID is still alive
+
+
+/*
+* Checks if the ffmpeg command is still running by querying if the PID is still alive
+*/ 
 #[tauri::command]
 async fn check_if_rendering(pid: u32) -> bool{
   let output = std::process::Command::new("tasklist")
@@ -80,7 +86,11 @@ async fn check_if_rendering(pid: u32) -> bool{
   return String::from_utf8_lossy(&output.stdout).contains(&format!("{} ", pid));
 }
 
-// Returns the contents of the progress file with output from ffmpeg
+
+
+/*
+* Returns the contents of the progress file with output from ffmpeg
+*/
 #[tauri::command]
 async fn check_progress() -> String{
 
@@ -92,15 +102,23 @@ async fn check_progress() -> String{
   return contents;
 }
 
-// Returns the number of generated frames/screenshots
-// Used when calculating progress based on ffmpeg output 
+
+
+/*
+* Returns the number of generated frames/screenshots
+* Used when calculating progress based on ffmpeg output 
+*/
 #[tauri::command]
 async fn get_frame_count(path: String) -> u32 {
   let paths = std::fs::read_dir(path).unwrap();
   return paths.count().try_into().unwrap();
 }
 
-// Opens a generic path in File Explorer
+
+
+/*
+* Opens a generic path in File Explorer
+*/
 #[tauri::command]
 async fn open_fs(path: String) {
   std::process::Command::new( "explorer" )
@@ -210,8 +228,13 @@ async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, fi
   font_path = font_path.replace(":", "\\:");
 
   // Generate outro file with text on
+  let ffmpeg_path = handle.path_resolver()
+  .resolve_resource("assets/ffmpeg.exe")
+  .expect("failed to resolve ffmpeg path")
+  .canonicalize().unwrap().to_string_lossy().into_owned();
+
   let named_outro = "$Env:temp/named_outro.mp4";
-  let add_name_to_video = "ffmpeg -y -i '".to_owned() + &outro_path + 
+  let add_name_to_video = ffmpeg_path + " -y -i '" + &outro_path + 
         "' -vf \"drawtext=fontfile='" + &font_path + "':text=" + &username + ":fontcolor=white:fontsize=96:x=(w-text_w)/2:y=(h-text_h)/2," +
         "drawtext=fontfile='" + &font_path + "':text=" + &date + ":fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-96)" +
         "\" -codec:a copy " + named_outro;
@@ -251,7 +274,12 @@ async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, fi
         .expect("Error adding line 2 to list.txt");
 
   // Concat Video and named_outro 
-  let merge_videos = "ffmpeg -y -safe 0 -f concat -i ".to_owned() + list_path + " -c copy $HOME/Videos/" + &filename;
+  let ffmpeg_path = handle.path_resolver()
+  .resolve_resource("assets/ffmpeg.exe")
+  .expect("failed to resolve ffmpeg path")
+  .canonicalize().unwrap().to_string_lossy().into_owned();
+
+  let merge_videos = ffmpeg_path + " -y -safe 0 -f concat -i " + list_path + " -c copy $HOME/Videos/" + &filename;
   std::process::Command::new("powershell")
         .args(["-command", &merge_videos])
         .creation_flags(0x08000000)
@@ -300,25 +328,6 @@ async fn get_screenshot_names(screenshotfolderpath: String) -> Vec<String> {
 
 
 /*
-* Checks if ffmpeg exists
-*/
-#[tauri::command]
-async fn check_ffmpeg_exists() -> bool {
-  let cmd = "ffmpeg";
-  let q = std::process::Command::new("powershell")
-        .args(["-command", &cmd])
-        .creation_flags(0x08000000)
-        .output()
-        .expect("Error");
-
-  let res = std::str::from_utf8(&q.stderr).unwrap();
-
-  return !res.contains("is not recognized");
-}
-
-
-
-/*
 * Get openspace.exe path (used to get installation folder)
 */
 #[tauri::command]
@@ -357,8 +366,8 @@ fn main() {
         [
           start_ffmpeg, pre_ffmpeg, check_if_rendering, check_progress, 
           get_frame_count, open_fs, clean_up, generate_outro_and_merge, 
-          get_screenshot_names, get_all_recordings, abort, check_ffmpeg_exists,
-          get_exec_path, get_content_as_string
+          get_screenshot_names, get_all_recordings, abort, get_exec_path,
+          get_content_as_string
         ])
       .run(tauri::generate_context!())
       .expect("error while running tauri application");

@@ -4,138 +4,149 @@
     <title>OpenSpace Video Creator</title>
     <link rel="stylesheet" type="text/css" href="style.css">
     <script type="text/javascript" src="openspace-api.js"></script>
+    <script type="text/javascript" src="helper-functions.js"></script>
     <script type="text/javascript" src="main.js"></script>
   </head>
   <body>
     <div id="overlay">
-      <p id="overlaytext">Hejdå</p>
+      <p id="overlaytext"></p>
     </div>
     <div id="container" class="disconnected">
       <div id="connection-status" class="connection-status">Försöker att ansluta till OpenSpace...
         <picture id="wrench"></picture>
       </div>
     </div>
-    <div class='header'>
-      <h2 id="welcomeMessage">Välkommen till OpenSpace Video Creator</h2>
-    </div>
-    <div id="isConnected">  
-      <div class="card">
-        <p class="static" style="display: inline; font-size:large;">Namn:</p> 
-        <input type="text" id="username" class="interactives" onkeydown="return /[a-ö\s]/i.test(event.key)">
+    <div id="maincontent">
+      <div id='header'>
+        <h2 id="welcomeMessage">Välkommen till OpenSpace Video Creator</h2>
       </div>
-      <div class="card">
-        <div id="flightdiv">
-          <p id="latestFlight" class="inline static">Det finns inga inspelade flygningar</p>
-          <select id="dropdown_flights" class="interactives">
-
-          </select>
-          <button class="legacyfolder" id="recordingsfolder" onClick="open_recordings_folder()"></button>
+      <div id="isConnected">  
+        <div class="card">
+          <p class="static" style="display: inline; font-size:large;">Namn:</p> 
+          <input type="text" id="username" class="interactives" onkeydown="return /[a-ö\s]/i.test(event.key)">
         </div>
-        <button onClick="start_recording()" id="startrecording" class="interactives">Spela in ny flygtur</button>
-        <button onClick="stop_recording()" id="stoprecording" class="interactives">Stoppa inspelning</button>
-        <button onClick="start_playback()" id="startplayback" class="interactives">Spela upp flygtur</button>
-        <button onClick="stop_playback()" id="stopplayback" class="interactives">Stoppa flygning</button>
-        <div class="inline easteregg" style="display:none;">
-          <input type="checkbox" id="timelimit" name="timelimit" class="interactives">
-          <label for="timelimit">Remove time limit</label><br>
+        <div class="card">
+          <div id="flightdiv">
+            <p id="latestFlight" class="inline static">Det finns inga inspelade flygningar</p>
+            <select id="dropdown_flights" class="interactives">
+  
+            </select>
+            <button class="legacyfolder" id="recordingsfolder" onClick="open_recordings_folder()"></button>
+            <div class="inline easteregg" style="display:none;">
+              <input type="checkbox" id="showallrecordings" name="showallrecordings" class="interactives">
+              <label for="showallrecordings">Show all</label><br>
+            </div>
+          </div>
+          <button onClick="start_recording()" id="startrecording" class="interactives">Spela in ny flygtur</button>
+          <button onClick="stop_recording()" id="stoprecording" class="interactives">Stoppa inspelning</button>
+          <button onClick="start_playback()" id="startplayback" class="interactives">Spela upp flygtur</button>
+          <button onClick="stop_playback()" id="stopplayback" class="interactives">Stoppa flygning</button>
+          <div class="inline easteregg" style="display:none;">
+            <input type="checkbox" id="timelimit" name="timelimit" class="interactives">
+            <label for="timelimit">Remove time limit</label><br>
+          </div>
         </div>
+        <div class="card">
+          <button onClick="create_video()" id="createVideo" class="interactives">Skapa video</button>
+          <button onClick="abort()" id="abort">Avbryt videoskapande</button>
+          <div class="inline easteregg" style="display:none;">
+            <select id="dropdown_fps" class="interactives"></select>
+            <input type="checkbox" id="removeoutro" name="removeoutro" class="interactives">
+            <label for="removeoutro">Remove outro</label><br>
+          </div>
+        </div>
+        <div class="card">
+          <div>
+            <h2>Information</h2>
+          </div>
+          <div id="logbox"></div>
+        </div>    
       </div>
-      <div class="card">
-        <button onClick="create_video()" id="createVideo" class="interactives">Skapa video</button>
-        <button onClick="abort()" id="abort">Avbryt videoskapande</button>
-        <div class="inline easteregg" style="display:none;">
-          <select id="dropdown_fps" class="interactives"></select>
-          <input type="checkbox" id="removeoutro" name="removeoutro" class="interactives">
-          <label for="removeoutro"> Remove outro</label><br>
-        </div>
+      <div class="card" id="isDisconnected">
+        Starta OpenSpace och försöka igen :
+        <button onClick="connectToOpenSpace()">Anslut</button>
       </div>
-      <div class="card">
-        <div>
-          <h2>Information</h2>
-        </div>
-        <div id="logbox"></div>
-      </div>    
+      <div id="appversion"></div>
+      <a id="ffmpegcredit" href="https://ffmpeg.org/" target="_blank">We are using ffmpeg</a>
     </div>
-    <div class="card" id="isDisconnected">
-      Starta OpenSpace och försöka igen :
-      <button onClick="connectToOpenSpace()">Anslut</button>
-    </div>
-    <script type="text/javascript">
-      // Checks that program is running on a supported OS
-      // Shouldn't really be needed right now, but could be good if it's ever expanded to other platforms later
-      if(window.navigator.platform === "Win32") {
-        let WIN7_NT = 6.1;
+  </body>
+  <script type="text/javascript">
+    // Checks that program is running on a supported OS
+    // Shouldn't really be needed right now, but could be good if it's ever expanded to other platforms later
+    if(window.navigator.platform === "Win32") {
+      let WIN7_NT = 6.1;
 
-        let ua = window.navigator.userAgent;
-        let str = ua.substring(ua.indexOf("(")+1, ua.indexOf(")"));
-        let parts = str.split(";");
-        let plat;
+      let ua = window.navigator.userAgent;
+      let str = ua.substring(ua.indexOf("(")+1, ua.indexOf(")"));
+      let parts = str.split(";");
+      let plat;
 
-        parts.forEach( e => { if(e.includes("NT")) { plat = Number(e.replace(/[^0-9\.]/gi, '')) } } );
-        if(plat < WIN7_NT) {
-          // We don't support Windows older than Windows 7
-          document.getElementById("welcomeMessage").innerHTML = "";
-          document.getElementById("isDisconnected").innerHTML = "";
-          document.getElementById("isDisconnected").classList.remove("card");
-          document.getElementById("connection-status").innerHTML = "ERROR: Program only works on Windows 7 or newer"
-        } 
-        else {
-          // Request notification permissions
-          // NOTE: Support for Windows 7 requires specific build: https://tauri.app/v1/guides/building/windows#webview2-installation-options
-          //       The required package for Win7 Notifications has already been included (see "windows7-compat" in cargo.toml)
-          (async () => {
-            _NOTIFICATION_PERMISSION_GRANTED_ = await isPermissionGranted();
-            if (!_NOTIFICATION_PERMISSION_GRANTED_) {
-              const permission = await requestPermission();
-              _NOTIFICATION_PERMISSION_GRANTED_ = permission === 'granted';
-            }
-          })();
-
-          // Loads file with animal names
-          load_animals();
-
-          // Connects to OpenSpace api
-          connectToOpenSpace();
-        }
-      }
-      else {
+      parts.forEach( e => { if(e.includes("NT")) { plat = Number(e.replace(/[^0-9\.]/gi, '')) } } );
+      if(plat < WIN7_NT) {
+        // We don't support Windows older than Windows 7
         document.getElementById("welcomeMessage").innerHTML = "";
         document.getElementById("isDisconnected").innerHTML = "";
         document.getElementById("isDisconnected").classList.remove("card");
-        document.getElementById("connection-status").innerHTML = "ERROR: Program only works on Windows"
-      }
-    </script>
-    <script>
-      _INPUT_CODE_ = [];
-      document.body.addEventListener('keydown', function (k) {
-        let code = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65, 13];
-        _INPUT_CODE_.push(k.keyCode);
-        if(_INPUT_CODE_.length > 11) {
-          _INPUT_CODE_.shift();
-        }
+        enable_overlay("red", "ERROR:\nProgram only works on Windows 7 or newer", 0.0, "yellow");
+      } 
+      else {
+        // Request notification permissions
+        // NOTE: Support for Windows 7 requires specific build: https://tauri.app/v1/guides/building/windows#webview2-installation-options
+        //       The required package for Win7 Notifications has already been included (see "windows7-compat" in cargo.toml)
+        (async () => {
+          _NOTIFICATION_PERMISSION_GRANTED_ = await isPermissionGranted();
+          if (!_NOTIFICATION_PERMISSION_GRANTED_) {
+            const permission = await requestPermission();
+            _NOTIFICATION_PERMISSION_GRANTED_ = permission === 'granted';
+          }
+        })();
 
-        if(_INPUT_CODE_.length == code.length) {
-          _INPUT_CODE_.forEach( (e,i) => {
-            if(e !== code[i]) {
-              return;
-            }
-            if(i == code.length-1) {
-              alert("Warning: removing the time limit or using 60 fps will drasticly increase the required disk space");
-              [...document.getElementsByClassName("easteregg")].forEach( e => {
-                e.style.display = "inline";
-              });
-            }
-          });
-        }
-      });
-    </script>
-    <script>
-      document.addEventListener('keydown', (e) => {
-        e = e || window.event;
-        if(e.keyCode == 116 || (e.ctrlKey && e.keyCode == 82)){
-            e.preventDefault();
-        }
-      });
-    </script>
-  </body>
+        // Loads file with animal names
+        load_animals();
+
+        // Connects to OpenSpace api
+        connectToOpenSpace();
+      }
+    }
+    else {
+      document.getElementById("welcomeMessage").innerHTML = "";
+      document.getElementById("isDisconnected").innerHTML = "";
+      document.getElementById("isDisconnected").classList.remove("card");
+      enable_overlay("red", "ERROR:\nProgram only works on Windows", 0.0, "yellow");
+    }
+  </script>
+  <script>
+    // Code to check and activate the Easter Egg function
+    _INPUT_CODE_ = [];
+    document.body.addEventListener('keydown', function (k) {
+      let code = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65, 13];
+      _INPUT_CODE_.push(k.keyCode);
+      if(_INPUT_CODE_.length > 11) {
+        _INPUT_CODE_.shift();
+      }
+
+      if(_INPUT_CODE_.length == code.length) {
+        _INPUT_CODE_.forEach( (e,i) => {
+          if(e !== code[i]) {
+            return;
+          }
+          if(i == code.length-1) {
+            alert("Warning: removing the time limit or using 60 fps will drasticly increase the required disk space");
+            [...document.getElementsByClassName("easteregg")].forEach( e => {
+              e.style.display = "inline";
+            });
+          }
+        });
+      }
+    });
+  </script>
+  <script>
+    // Comment out this if you want to be able to use F5 (CTRL + R) during development
+    document.addEventListener('keydown', (e) => {
+      e = e || window.event;
+      if(e.keyCode == 116 || (e.ctrlKey && e.keyCode == 82)){
+          e.preventDefault();
+      }
+    });
+  </script>
 </html>
