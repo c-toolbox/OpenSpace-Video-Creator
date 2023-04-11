@@ -32,7 +32,7 @@ async fn pre_ffmpeg() -> String {
 */
 #[tauri::command]
 async fn start_ffmpeg(handle: tauri::AppHandle, screenshotspath: String, framerate: u32, startindex: i32) -> u32 {
-  let ffmpeg_path = handle.path_resolver()
+  let ffmpeg_path:String = handle.path_resolver()
       .resolve_resource("assets/ffmpeg.exe")
       .expect("failed to resolve ffmpeg path")
       .canonicalize().unwrap().to_string_lossy().into_owned();
@@ -42,7 +42,7 @@ async fn start_ffmpeg(handle: tauri::AppHandle, screenshotspath: String, framera
     start_index_command = " -start_number ".to_owned() + &startindex.to_string();
   } 
 
-  let ffmpeg_code = "$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'; (echo Y | ".to_owned() + &ffmpeg_path + " -framerate " + &framerate.to_string() + &start_index_command + " -i '" + &screenshotspath + "/OpenSpace_%06d.png' -c:v libx264 -pix_fmt yuv420p -s 1920x1080 -crf 17 $Env:temp/openspace_video.mp4 -hide_banner 1> $Env:temp/progress.space 2>&1)";
+  let ffmpeg_code = "$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'; (echo Y | &'".to_owned() + &ffmpeg_path + "' -framerate " + &framerate.to_string() + &start_index_command + " -i '" + &screenshotspath + "/OpenSpace_%06d.png' -c:v libx264 -pix_fmt yuv420p -s 1920x1080 -crf 17 $Env:temp/openspace_video.mp4 -hide_banner 1> $Env:temp/progress.space 2>&1)";
   let child = std::process::Command::new("powershell")
         .args(["-command", &ffmpeg_code])
         .creation_flags(0x08000000)
@@ -228,13 +228,13 @@ async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, fi
   font_path = font_path.replace(":", "\\:");
 
   // Generate outro file with text on
-  let ffmpeg_path = handle.path_resolver()
+  let ffmpeg_path:String = handle.path_resolver()
   .resolve_resource("assets/ffmpeg.exe")
   .expect("failed to resolve ffmpeg path")
   .canonicalize().unwrap().to_string_lossy().into_owned();
 
   let named_outro = "$Env:temp/named_outro.mp4";
-  let add_name_to_video = ffmpeg_path + " -y -i '" + &outro_path + 
+  let add_name_to_video = "&'".to_owned() + &ffmpeg_path + "' -y -i '" + &outro_path + 
         "' -vf \"drawtext=fontfile='" + &font_path + "':text=" + &username + ":fontcolor=white:fontsize=96:x=(w-text_w)/2:y=(h-text_h)/2," +
         "drawtext=fontfile='" + &font_path + "':text=" + &date + ":fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h-96)" +
         "\" -codec:a copy " + named_outro;
@@ -274,12 +274,12 @@ async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, fi
         .expect("Error adding line 2 to list.txt");
 
   // Concat Video and named_outro 
-  let ffmpeg_path = handle.path_resolver()
+  let ffmpeg_path:String = handle.path_resolver()
   .resolve_resource("assets/ffmpeg.exe")
   .expect("failed to resolve ffmpeg path")
   .canonicalize().unwrap().to_string_lossy().into_owned();
 
-  let merge_videos = ffmpeg_path + " -y -safe 0 -f concat -i " + list_path + " -c copy $HOME/Videos/" + &filename;
+  let merge_videos = "&'".to_owned() + &ffmpeg_path + "' -y -safe 0 -f concat -i " + list_path + " -c copy $HOME/Videos/" + &filename + " 1> $Env:temp/INFO.txt 2>&1";
   std::process::Command::new("powershell")
         .args(["-command", &merge_videos])
         .creation_flags(0x08000000)
