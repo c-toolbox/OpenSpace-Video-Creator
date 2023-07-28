@@ -15,7 +15,9 @@ The tool was **only built for Windows** (primary Windows 10/11) but may work on 
 
 Note: you may need to install some dependencies via npm, it will say which ones 😉
 
-## How to build binaries for distribution
+## Developer information
+
+### How to build binaries for distribution
 
 If you want to build and distribute the program, just run the file `.\OSVC_Installer\build_and_package_installer.ps1`.
 This file will build the Tauri app, copy the and rename the binary file and then zip it.
@@ -30,24 +32,13 @@ Once the build finishes you can find the .msi under: `...\src-tauri\target\relea
 Just send the zip/package to the person who wants it and they can install it to get OpenSpace Video Creator <p style="display: inline; font-size: x-large">🎉🎊🎈</p>
 </div>
 
-
-### Other things and good-to-knows
-Below you will find some additional information that may be good to know.
-
-##### Don't tell anyone, but...
-... there is a way to disable automatic outro, change FPS (30 or 60 for now), remove the time limit for recordings and to show all existing recordings (not limited to last 24 hours).
-In order to show these options, input the _Konami code_ 🎮🕹️
-
-This options are now shown by default as we always want the outro and other settings as default for the workshops. 
-However, there may be times when someone wants to use this tool under other circumstances.
-
-##### How to update app version
+### How to update app version
 If want to change the app version for a new release or patch, you need to update the app version in the following files:
 - Cargo.toml
 - tauri.conf.json
 
 
-##### How to create a proper outro
+### How to create a proper outro
 1. Design a template and render it to a PNG sequence in your program of choice.
 For this project Adobe After Effects was used and you can find the project file for it in the `misc` folder.
 2. Once you have the PNG sequence, use ffmpeg to generate the outro video in `mp4 (h264)` format.
@@ -59,19 +50,28 @@ You can read more about ffmpeg and PNG sequences here: https://en.wikibooks.org/
 4. Go to file `...\src-tauri\tauri.conf.json` and add reference the resource under `bundle -> resources`
 The outro should now be accessible from the code (which you'll have to figure out yourself 😉)
 
+## Other things and good-to-knows
+Below you will find some additional information that may be good to know.
 
-##### Space is not as big as you think (hard drives)
-Generating the PNG sequence takes a lot of space.
-Using screenshots in 720p (30fps) you will generate about 4,5 GB worht of PNGs.
-Using screenshots in 1440p (30fps) you will generate about 10,5 GB worth of PNGs.
+### Space is not as big as you think (HDD / SDD storage)
+Generating the PNG sequence takes a lot of space (issue [#4](https://github.com/c-toolbox/OpenSpace-Video-Creator/issues/4) would solve this).</br>
+Using screenshots in 720p (30fps) you will generate about 4,5 GB worht of PNGs.</br>
+Using screenshots in 1440p (30fps) you will generate about 10,5 GB worth of PNGs.</br>
 Default OpenSpace rendering (and screenshot) resolution for 1080p screen is 720p and 1440p for a 4K monitor.
 
 <div>
 And don't worry, the program cleans up after itself <p style="display: inline; font-size: x-large">🧹🗑️</p>
 </div>
 
+### Don't tell anyone, but...
+... there is a way to disable automatic outro, change FPS (30 or 60 for now), remove the time limit for recordings and to show all existing recordings (not limited to last 24 hours).
+In order to show these options, input the _Konami code_ 🎮🕹️
 
-### A cautionary tale...
+This options are now shown by default as we always want the outro and other settings as default for the workshops. 
+However, there may be times when someone wants to use this tool under other circumstances.
+
+
+## A cautionary tale...
 The source code is messy.
 
 ```
