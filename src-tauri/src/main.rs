@@ -9,29 +9,13 @@
 use std::{os::windows::process::CommandExt};
 
 
-/*
-* Creates file used for ffmpeg output
-* Returns Powershell command execution status
-*/
-#[tauri::command]
-async fn pre_ffmpeg() -> String {
-  let create_indication_file = "New-Item $Env:temp/progress.space -Force";
-  let out_cif = std::process::Command::new("powershell")
-        .args(["-command", create_indication_file])
-        .creation_flags(0x08000000)
-        .output()
-        .expect("Error running create_indication_file");
-  return (out_cif.status).to_string();
-}
-
-
 
 /*
 * Starts the ffmpeg command to create video from the generated frames
 * Returns the PID of the Powershell process
 */
 #[tauri::command]
-async fn start_ffmpeg(handle: tauri::AppHandle, screenshotspath: String, framerate: u32, startindex: i32) -> u32 {
+async fn render_sequence(handle: tauri::AppHandle, filename: String, screenshotspath: String, framerate: u32, startindex: i32) -> u32 {
   let ffmpeg_path:String = handle.path_resolver()
       .resolve_resource("assets/ffmpeg.exe")
       .expect("failed to resolve ffmpeg path")
@@ -42,7 +26,7 @@ async fn start_ffmpeg(handle: tauri::AppHandle, screenshotspath: String, framera
     start_index_command = " -start_number ".to_owned() + &startindex.to_string();
   } 
 
-  let ffmpeg_code = "$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'; (echo Y | &'".to_owned() + &ffmpeg_path + "' -framerate " + &framerate.to_string() + &start_index_command + " -i '" + &screenshotspath + "/OpenSpace_%06d.png' -c:v libx264 -pix_fmt yuv420p -s 1920x1080 -crf 17 $Env:temp/openspace_video.mp4 -hide_banner 1> $Env:temp/progress.space 2>&1)";
+  let ffmpeg_code = "$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'; (echo Y | &'".to_owned() + &ffmpeg_path + "' -framerate " + &framerate.to_string() + &start_index_command + " -i '" + &screenshotspath + "/OpenSpace_%06d.png' -c:v libx264 -pix_fmt yuv420p -s 1920x1080 -crf 17 $Env:temp/" + &filename + ".mp4 -loglevel quiet)";
   let child = std::process::Command::new("powershell")
         .args(["-command", &ffmpeg_code])
         .creation_flags(0x08000000)
@@ -52,18 +36,44 @@ async fn start_ffmpeg(handle: tauri::AppHandle, screenshotspath: String, framera
 }
 
 
+/* 
+* Renames a rendered sequence (mp4) to another name.
+* Used when preparing for concatenation of video files
+*/
+#[tauri::command]
+async fn rename_sequence(filename: String, newname: String) {
+  let mv = "Move-Item $Env:temp/".to_owned() + &filename + ".mp4 " + "$Env:temp/" + &newname + ".mp4 -force";
+  let mut child = std::process::Command::new("powershell")
+        .args(["-command", &mv])
+        .creation_flags(0x08000000)
+        .spawn()
+        .unwrap();
+  let _res = child.wait();
+}
 
-/*
+
+
+/* 
 * Removes temporary log files, etc
 */
 #[tauri::command]
-async fn clean_up(screenshotfolderpath: String) {
-  // Remove progress.space file
-  std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/progress.space").err();
+async fn clean_some(screenshotfolderpath: String) {
+  // Cleans up all old screenshots
+  nuke_screenshots_folder(screenshotfolderpath);
+}
 
-  // Remove temporary generated files: named_outro.mp4, openspace_video.mp4, list.space
+
+
+/* 
+* Removes temporary log files, etc
+*/
+#[tauri::command]
+async fn clean_all(screenshotfolderpath: String) {
+
+  std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/osv_chunk.mp4").err();
+  std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/osv_progress.mp4").err();
+  std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/osv.mp4").err();
   std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/named_outro.mp4").err();
-  std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/openspace_video.mp4").err();
   std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/list.space").err();
 
   // Cleans up all old screenshots
@@ -84,34 +94,6 @@ async fn check_if_rendering(pid: u32) -> bool{
         .output()
         .expect("failed to execute command");
   return String::from_utf8_lossy(&output.stdout).contains(&format!("{} ", pid));
-}
-
-
-
-/*
-* Returns the contents of the progress file with output from ffmpeg
-*/
-#[tauri::command]
-async fn check_progress() -> String{
-
-  let progress_file = std::env::temp_dir().to_string_lossy().into_owned() + "progress.space";
-
-  let contents = std::fs::read_to_string(progress_file)
-        .expect("Should have been able to read the file");
-
-  return contents;
-}
-
-
-
-/*
-* Returns the number of generated frames/screenshots
-* Used when calculating progress based on ffmpeg output 
-*/
-#[tauri::command]
-async fn get_frame_count(path: String) -> u32 {
-  let paths = std::fs::read_dir(path).unwrap();
-  return paths.count().try_into().unwrap();
 }
 
 
@@ -197,7 +179,7 @@ async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, fi
 
   // If flag is true, we skip outro and just move the generated video to User Video folder
   if flag {
-    let mv = "Move-Item $Env:temp/openspace_video.mp4 ".to_owned() + "$HOME/Videos/" + &filename + " -force";
+    let mv = "Move-Item $Env:temp/osv.mp4 ".to_owned() + "$HOME/Videos/" + &filename + " -force";
     std::process::Command::new("powershell")
           .args(["-command", &mv])
           .creation_flags(0x08000000)
@@ -258,7 +240,7 @@ async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, fi
 
   // Populate list.txt with the videos that should be merged
   let temp_folder = std::env::temp_dir().to_string_lossy().into_owned();
-  let line1 = "\"file '".to_owned() + &temp_folder + "openspace_video.mp4'\"";
+  let line1 = "\"file '".to_owned() + &temp_folder + "osv.mp4'\"";
   let line2 = "\"file '".to_owned() + &temp_folder + "named_outro.mp4'\"";
 
   std::process::Command::new("powershell")
@@ -273,18 +255,65 @@ async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, fi
         .output()
         .expect("Error adding line 2 to list.txt");
 
-  // Concat Video and named_outro 
-  let ffmpeg_path:String = handle.path_resolver()
-  .resolve_resource("assets/ffmpeg.exe")
-  .expect("failed to resolve ffmpeg path")
-  .canonicalize().unwrap().to_string_lossy().into_owned();
-
-  let merge_videos = "&'".to_owned() + &ffmpeg_path + "' -y -safe 0 -f concat -i " + list_path + " -c copy $HOME/Videos/" + &filename + " 1> $Env:temp/INFO.txt 2>&1";
+  let merge_videos = "&'".to_owned() + &ffmpeg_path + "' -y -safe 0 -f concat -i " + list_path + " -c copy $HOME/Videos/" + &filename;
   std::process::Command::new("powershell")
         .args(["-command", &merge_videos])
         .creation_flags(0x08000000)
         .output()
         .expect("Error exporting video with outro");
+}
+
+
+
+/* 
+* Merges two video files
+* Used when merging the newest rendered chunk with the previously combined videos
+*/
+#[tauri::command] 
+async fn merge(handle: tauri::AppHandle, progressname: String, chunkname: String, outputname: String) {
+
+  let ffmpeg_path:String = handle.path_resolver()
+  .resolve_resource("assets/ffmpeg.exe")
+  .expect("failed to resolve ffmpeg path")
+  .canonicalize().unwrap().to_string_lossy().into_owned();
+
+  // Generate concat txt file
+  let list_path = "$Env:temp/list.space";
+  let create_list_file = "New-Item ".to_owned() + list_path + " -Force";
+  std::process::Command::new("powershell")
+        .args(["-command", &create_list_file])
+        .creation_flags(0x08000000)
+        .output()
+        .expect("Error creating list.txt");
+
+  // Populate list.txt with the videos that should be merged
+  let temp_folder = std::env::temp_dir().to_string_lossy().into_owned();
+  let line1 = "\"file '".to_owned() + &temp_folder + &progressname + ".mp4'\"";
+  let line2 = "\"file '".to_owned() + &temp_folder + &chunkname + ".mp4'\"";
+
+  std::process::Command::new("powershell")
+        .args(["-command", &(line1 + " | Out-File -Encoding ASCII -append " + &list_path)])
+        .creation_flags(0x08000000)
+        .output()
+        .expect("Error adding line 1 to list.txt");
+
+  std::process::Command::new("powershell")
+        .args(["-command", &(line2 + " | Out-File -Encoding ASCII -append " + &list_path)])
+        .creation_flags(0x08000000)
+        .output()
+        .expect("Error adding line 2 to list.txt");
+
+  let merge_videos = "&'".to_owned() + &ffmpeg_path + "' -y -safe 0 -f concat -i " + list_path + " -c copy $Env:temp/" + &outputname + ".mp4 -loglevel quiet";
+  let mut child = std::process::Command::new("powershell")
+        .args(["-command", &merge_videos])
+        .creation_flags(0x08000000)
+        .spawn()
+        .unwrap();
+  let _res = child.wait();
+
+  std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/" + &chunkname + ".mp4").err();
+  std::fs::remove_file(std::env::temp_dir().to_string_lossy().into_owned() + "/" + &progressname + ".mp4").err();
+
 }
 
 
@@ -295,11 +324,12 @@ async fn generate_outro_and_merge(handle: tauri::AppHandle, username: String, fi
 #[tauri::command]
 async fn abort(pid: u32) {
   let cmd = "kill ".to_owned() + &pid.to_string();
-  std::process::Command::new("powershell")
+  let mut child = std::process::Command::new("powershell")
         .args(["-command", &cmd])
         .creation_flags(0x08000000)
         .spawn()
         .expect("Error");
+  let _res = child.wait();
 }
 
 
@@ -364,10 +394,10 @@ fn main() {
   tauri::Builder::default()
       .invoke_handler(tauri::generate_handler!
         [
-          start_ffmpeg, pre_ffmpeg, check_if_rendering, check_progress, 
-          get_frame_count, open_fs, clean_up, generate_outro_and_merge, 
+          check_if_rendering, open_fs, generate_outro_and_merge, 
           get_screenshot_names, get_all_recordings, abort, get_exec_path,
-          get_content_as_string
+          get_content_as_string, render_sequence, merge, clean_some, 
+          clean_all, rename_sequence
         ])
       .run(tauri::generate_context!())
       .expect("error while running tauri application");

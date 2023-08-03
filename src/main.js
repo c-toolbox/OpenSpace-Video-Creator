@@ -9,8 +9,8 @@ const tauriWindow = window.__TAURI__.window;
 
 // Constant
 const MINIMUM_OPENSPACE_VERSION = "0.17.0";
-const RECORDING_LENGTH_AS_MILLISECONDS = (5*60 + 0) * 1000; // (minutes*60 + seconds) * 1000 (converts to milliseconds)
-const MILLISECONDS_PER_DAY = 86400000;
+const RECORDING_LENGTH_AS_MILLISECONDS = (10*60 + 0) * 1000; // (minutes*60 + seconds) * 1000 (converts to milliseconds)
+const RECORDING_HIDE_TIMER_IN_MILLISECONDS = 43200000;
 const FRAMERATES = {
   "FPS_30": 30,
   "FPS_60": 60
@@ -60,7 +60,7 @@ let connectToOpenSpace = async () => {
       enable_overlay("black", "Hejdå");
 
       setTimeout(async () => {
-        await invoke("clean_up", {screenshotfolderpath: _SCREENSHOTS_PATH_});
+        await invoke("clean_all", {screenshotfolderpath: _SCREENSHOTS_PATH_});
         tauriWindow.getCurrent().close();
       }, 4000);
     });
@@ -87,6 +87,7 @@ let connectToOpenSpace = async () => {
       subscribe_to_sessionRecording_topic();
 
       // Get framerates and add them to (hidden) list
+      document.getElementById("dropdown_fps").length = 0;
       for(let key in FRAMERATES) {
         let opt = document.createElement("option");
         opt.text = `${FRAMERATES[key]} fps`;
@@ -98,7 +99,10 @@ let connectToOpenSpace = async () => {
       document.getElementById("showallrecordings").addEventListener('change', async () => {
         set_state(READY)
       })
-      
+
+      // set openspace screenshot path other than default location
+      await set_openspace_screenshot_folder("temp");
+
       // Set som initial variables
       await set_screenshot_path();
       await set_video_export_path();
@@ -144,27 +148,9 @@ async function create_video() {
     e.disabled = true;
   }
 
-  // Generate frames from the latest recording
-  let startindex = await generate_frames();
-  if(startindex == -1) {
-    alert("ERROR: frame generation did not succeed");
-    return;
-  }
+  // Generate frames and create video with (or without) outro
+  await render();
 
-  // Create main video file based on the generated frames
-  let pid = await start_ffmpeg(startindex);
-  if(pid == -1) {
-    alert("Ffmpeg failed to start");
-    return;
-  }
-  await check_progress(pid);
-
-  // Create Outro + merge
-  await generate_outro_and_merge();
-
-  // Clean-up
-  await invoke("clean_up", {screenshotfolderpath: _SCREENSHOTS_PATH_});
-  
   // Clears the state
   await clear_state();
 
@@ -189,171 +175,188 @@ async function create_video() {
 
 
 
-/*#####################################################################
-#                                                                     #
-#   BELOW FOLLOWS FUNCTIONS THAT ARE CALLED FROM THE MAIN FUNCTION    #
-#   BELOW FOLLOWS FUNCTIONS THAT ARE CALLED FROM THE MAIN FUNCTION    #
-#   BELOW FOLLOWS FUNCTIONS THAT ARE CALLED FROM THE MAIN FUNCTION    #
-#                                                                     #
-#####################################################################*/
+/*##########################################################################
+#                                                                          #
+#    BELOW FOLLOWS FUNCTIONS THAT ARE CALLED FROM CREATE_VIDEO FUNCTION    #
+#    BELOW FOLLOWS FUNCTIONS THAT ARE CALLED FROM CREATE_VIDEO FUNCTION    #
+#    BELOW FOLLOWS FUNCTIONS THAT ARE CALLED FROM CREATE_VIDEO FUNCTION    #
+#                                                                          #
+###########################################################################*/
 
 
 
 /*
-* Generates frames based on the latest recording found
+* Render function that generates frames and creates the video in chunks.
 */
-async function generate_frames() {
+async function render() {
 
   // Early bail
   if(_ABORT_) {
     return;
   }
-
-  document.getElementById('container').classList.add("generating");
+  
+  // Need to set UI stuff here
+  document.getElementById('container').classList.add("rendering");
   document.getElementById('connection-status').innerHTML = "";
 
   let p_elem = document.createElement("p");
   p_elem.id = "generatingprogress"
-  p_elem.innerText = "Skapar bildsekvens";
+  p_elem.innerText = "Skapar din video.";
   document.getElementById('connection-status').append(p_elem);
 
-  await add_picture_element("frames", "connection-status", "assets/frames.png", 36, 36, "legacy");
+  await add_picture_element("moviecamera", "connection-status", "assets/moviecamera.png", 36, 36, "legacy");
+
+  // Clean
+  await invoke("clean_all", {screenshotfolderpath: _SCREENSHOTS_PATH_});
 
   // Get recording path and check if recording exists
   let filewithpath = document.getElementById("dropdown_flights").value;
-
   if(!filewithpath) {
     alert("VARNING: Du måste spela in en flygtur först");
     return;
   }
 
-  // Clean old things first if there are any
-  await invoke("clean_up", {screenshotfolderpath: _SCREENSHOTS_PATH_});
-
-  // Set recording frame rate
+  // Set recording parameters and reset counter
   _FRAMERATE_ = Number(document.getElementById("dropdown_fps").value);
   await openspace.sessionRecording.enableTakeScreenShotDuringPlayback(_FRAMERATE_);
-
+  
   // Reset screenshot counter
   let DID_RESET = false;
-  var startindex = -1;
+  var idx = -1;
   try {
     // Try using API, but if User is using older OpenSpace version we do fallback
     await openspace.resetScreenshotNumber();
     DID_RESET = true;
-    startindex = 0;
+    idx = 0;
   } catch (e) {
     DID_RESET = false;
   }
-  
 
-  // Turns of UI and starts rendering of frames
+  // Define an interval function that creates the ticking dots in the information text
+  let ticker = setInterval(() => {
+    let t = ((document.getElementById("generatingprogress").innerText.match(/\./g)) || []).length;
+    let n = (t % 4) + 1;
+    document.getElementById("generatingprogress").innerText = `Skapar din video${[...Array(n).fill(".")].join("")}`;
+  }, 500);
+
+  // Create timer variables and auxillary variables used in the main rendering loop
+  let start = new Date();
+  let now = new Date();
+  let pid = null;
+  let firstRun = true;
+
+  // Hide Openspace UI and start recording
   await set_openspace_ui_state(false);
   await openspace.sessionRecording.startPlayback(filewithpath, false);
 
-  // Loop and updates UI when the frame generation is complete
+  // Main rendering loop
+  while( _ABORT_ == false) {
+    now = new Date();
 
-  while(true) {
-    if(_ABORT_) {
-      await openspace.sessionRecording.stopPlayback();
+    // Checks if we've generated enough or all available frames before continuing 
+    if (now - start > 5000 || (await openspace.sessionRecording.isPlayingBack())[1] == false) {
       
-      // We need to sleep as some data may still be in state of being written, 
-      // so calling clean_up to early will miss some things
-      await sleep(2500);
-      await invoke("clean_up", {screenshotfolderpath: _SCREENSHOTS_PATH_});
+      // Pause the frame generation (playback)
+      await openspace.sessionRecording.setPlaybackPause(true);
       
-      await set_openspace_ui_state(true);
-      break;
-    }
+      // Sets screenshot starting index (to be passed to ffmpeg)
+      if (!DID_RESET) {
+        idx = await get_screenshot_starting_index();
+      } else {
+        await openspace.resetScreenshotNumber();
+        idx = 0;
+      }
+      
+      // Renders the sequence based on the generated frames
+      pid = await invoke("render_sequence", {filename: "osv_chunk", screenshotspath: _SCREENSHOTS_PATH_, framerate: _FRAMERATE_, startindex: idx}).then( (msg) => {return msg});
+      while(true) {
 
-    let t = document.getElementById("generatingprogress").innerText;
-    let n = (t.length % 3) + 1;
-    document.getElementById("generatingprogress").innerText = `Skapar bildsekvens${[...Array(n).fill(".")].join("")}`;
+        if(_ABORT_) {
+          await invoke("abort", {pid: pid});
+          break;
+        }
+        
+        // Check if ffmpeg is still rendering the video file
+        let isRendering = await invoke("check_if_rendering", {pid: pid}).then( (msg) => {return msg});
 
-    let isplaying = (await openspace.sessionRecording.isPlayingBack())[1];
-    if (!isplaying) {
-      if(!DID_RESET) {
-        startindex = await get_screenshot_starting_index();
+        if(!isRendering) {
+          break;
+        }
+        
+        await sleep(100); 
       }
 
-      document.getElementById('frames').remove();
-      document.getElementById('container').classList.remove("generating");
-      document.getElementById('connection-status').innerHTML = "Tänker...";
-      await set_openspace_ui_state(true);
-      return startindex;
+      // Special case if it's our first rendered sequence
+      // We rename it to osv so that it can either be used for merge with next chunk or
+      // be used as the final video before being merged with the outro
+      if (firstRun) {
+        await invoke("rename_sequence", {filename: "osv_chunk", newname: "osv"});
+        firstRun = false;
+      }
+      else {
+        // Merges the previous video with the new chunk
+        await invoke("rename_sequence", {filename: "osv", newname: "osv_progress"});
+        await invoke("merge", {progressname: "osv_progress", chunkname: "osv_chunk", outputname: "osv"});
+      }
+
+      // Cleans up the old frames
+      await invoke("clean_some", {screenshotfolderpath: _SCREENSHOTS_PATH_});
+      
+      // Sets new timer and starts playback again
+      start = new Date();
+      await openspace.sessionRecording.setPlaybackPause(false);
     }
-    await sleep(250);
-  }
-}
 
-
-
-/*
-* Starts ffmpeg to generate main video file from generated frames
-*/
-async function start_ffmpeg(idx) {
-
-  // Early bail
-  if(_ABORT_) {
-    return;
-  }
-
-  let pre_status = await invoke("pre_ffmpeg").then( (res) => {return res});
-  if(pre_status.includes(0)) {
-    return await invoke("start_ffmpeg", {screenshotspath: _SCREENSHOTS_PATH_, framerate: _FRAMERATE_, startindex: idx}).then( (msg) => {return msg});
-  }
-  else {
-    console.log("Error: Something went wrong in pre_ffmpeg");
-    alert("VARNING: Något gick fel, testa att starta om programmet och kör igen");
-    await invoke("clean_up", {screenshotfolderpath: _SCREENSHOTS_PATH_});
-    return -1;
-  }
-}
-
-
-
-/*
-* Checks the rendering progress for main video file from the generated frames
-*/
-async function check_progress(pid) {
-
-  // Early bail
-  if(_ABORT_) {
-    return;
-  }
-
-  document.getElementById('container').classList.add("rendering");
-
-  document.getElementById('connection-status').innerHTML = "Renderar video (0%) ";
-
-  await add_picture_element("rocket", "connection-status", "assets/rocket.png", 32, 32, "legacy");
-
-  let framecount = await count_frames();
-  let elem = document.getElementById("rocket");
-  while(true) {
-
-    if(_ABORT_) {
-      await invoke("abort", {pid: pid});
+    // Breaks the loop if the recording is done
+    if( (await openspace.sessionRecording.isPlayingBack())[1] == false) {
       break;
     }
 
-    let isRendering = await invoke("check_if_rendering", {pid: pid}).then( (msg) => {return msg});
-    if(!isRendering) {
-      document.getElementById('rocket').remove();
-      document.getElementById('container').classList.remove("rendering");
-      document.getElementById('connection-status').innerHTML = "Tänker...";
-      break;
-    }
-
-    // Parses and filters the log file from ffmpeg in order to see how much progress has been made
-    let prog = await get_ffmpeg_progress(framecount);
-    if(prog) {
-      document.getElementById('connection-status').innerHTML = `Renderar video (${prog})%`;
-      document.getElementById('connection-status').append(elem);
-    }
-
-    await sleep(250); 
+    await sleep(50);
   }
+
+  // Cleans up and resets states if we abort during the rendering
+  if (_ABORT_) {
+    await openspace.sessionRecording.stopRecording();
+    await openspace.sessionRecording.stopPlayback();
+    await sleep(500);
+    await set_openspace_ui_state(true)
+    await invoke("clean_all", {screenshotfolderpath: _SCREENSHOTS_PATH_});
+    document.getElementById('moviecamera').remove();
+    document.getElementById('container').classList.remove("rendering");
+    clearInterval(ticker);
+    return;
+  }
+
+  // Generate and merge outro
+  // Gets the Username and animal+randomNumber in order to create the final video name
+  let e = document.getElementById("dropdown_flights");
+  let name = document.getElementById("username").value.replace(/[^a-ö\s]/gi, '');
+  let prefix = (name) ? name.replace(/\s/g,'') : name = "Astronaut";
+  let animalsuffix = e[e.options.selectedIndex].text;
+  let filename = name_builder(prefix, animalsuffix);
+
+  // Flag to see if outro should be created or not
+  let outroflag = document.getElementById("removeoutro").checked;
+
+  // Format todays date to "DD month YYYY"
+  const date = new Date();
+  const formattedDate = date.toLocaleDateString('sv-SE', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  }).replace(/ /g, ' ');
+
+  // Calls the RUST function that generates the Outro and merges it with the rendered video
+  await invoke("generate_outro_and_merge", {username: name, filename: filename, date: formattedDate, framerate: _FRAMERATE_, flag: outroflag});
+
+  // Add logging information in the Information-box
+  await add_to_info_box(VIDEO, filename);
+
+  //Clean up and resets states
+  await invoke("clean_all", {screenshotfolderpath: _SCREENSHOTS_PATH_});
+  await set_openspace_ui_state(true)
+  document.getElementById('moviecamera').remove();
+  document.getElementById('container').classList.remove("rendering");
+  clearInterval(ticker);
 }
 
 
@@ -367,13 +370,6 @@ async function generate_outro_and_merge() {
   if(_ABORT_) {
     return;
   }
-
-  document.getElementById('container').classList.add("outro");
-
-  document.getElementById('connection-status').innerHTML = "Skapar magi ";
-
-  await add_picture_element("wand", "connection-status", "assets/wand.png", 36, 36, "legacy");
-  await add_picture_element("crystalball", "connection-status", "assets/crystalball.png", 36, 36, "legacy");
 
   // Gets the Username and animal+randomNumber in order to create the final video name
   let e = document.getElementById("dropdown_flights");
@@ -396,12 +392,6 @@ async function generate_outro_and_merge() {
 
   // Add logging information in the Information-box
   await add_to_info_box(VIDEO, filename);
-
-  // Removes some classes
-  document.getElementById('wand').remove();
-  document.getElementById('crystalball').remove();
-  document.getElementById('container').classList.remove("outro");
-  document.getElementById('connection-status').innerHTML = "Tänker...";
 }
 
 
@@ -448,10 +438,10 @@ async function set_state(STATE) {
           return Number(a[1]) - Number(b[1]);
         });
 
-        // Mark all recordings that are older than 24hours (unless Easter Egg option to show all is checked)
+        // Mark all recordings that are older than 12 hours (unless Easter Egg option to show all is checked)
         let todelete = [];
         for(let i = 0; i < recordings.length; ++i) {
-          if(!showall && Number(recordings[i][1]) > MILLISECONDS_PER_DAY) {
+          if(!showall && Number(recordings[i][1]) > RECORDING_HIDE_TIMER_IN_MILLISECONDS) {
             todelete.push(i);
           }
           recordings[i][0] = recordings[i][0].slice(recordings[i][0].lastIndexOf("\\")).replace("\\","");
@@ -486,8 +476,8 @@ async function set_state(STATE) {
         document.getElementById("dropdown_flights").style.display = "none";
       }
 
-      // Only proceed if we have a filename and if it's modified date is within 24h
-      if(filename && (file_time < MILLISECONDS_PER_DAY || showall)) {
+      // Only proceed if we have a filename and if it's modified date is within 12 hours
+      if(filename && (file_time < RECORDING_HIDE_TIMER_IN_MILLISECONDS || showall)) {
         document.getElementById("dropdown_flights").style.display = "inline";
         document.getElementById("latestFlight").innerHTML = "Senast inspelade flygturen: ";
 
@@ -522,14 +512,14 @@ async function set_state(STATE) {
         document.getElementById("recordingsfolder").style.display = "none";
       }
 
-      let rm1 = ["recording", "generating", "rendering", "outro"]
+      let rm1 = ["recording", "rendering"]
       document.getElementById('container').classList.remove(...rm1);
       break;
 
     case DISCONNECTED:
 
       if(_SCREENSHOTS_PATH_ !== "") {
-        await invoke("clean_up", {screenshotfolderpath: _SCREENSHOTS_PATH_});
+        await invoke("clean_all", {screenshotfolderpath: _SCREENSHOTS_PATH_});
       }
 
       document.getElementById('container').className = "disconnected";
@@ -545,7 +535,7 @@ async function set_state(STATE) {
       document.getElementById('isDisconnected').style.display = "block";
       document.getElementById('isConnected').style.display = "none";
       
-      let rm2 = ["recording", "generating", "rendering", "outro"]
+      let rm2 = ["recording", "rendering"]
       document.getElementById('container').classList.remove(...rm2)
       break;
   }
@@ -576,16 +566,13 @@ async function start_recording() {
   document.getElementById("startrecording").style.display = "none";
   document.getElementById("stoprecording").style.display = "inline";
   
-
-
-  let recordingname = get_random_animal();
-
   document.getElementById('container').classList.add("recording");
   document.getElementById('connection-status').innerHTML = "Inspelning pågår ";
 
   await add_picture_element("moviecamera", "connection-status", "assets/moviecamera.png", 36, 36, "legacy");
   
   // Start recording
+  let recordingname = get_random_animal();
   await openspace.sessionRecording.startRecording(recordingname)
 
   // Get initial time

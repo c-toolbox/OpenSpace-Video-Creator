@@ -51,8 +51,17 @@ async function set_recordings_path() {
 */
 async function get_screenshot_folder_path(){
   let rawpath = (await openspace.absPath("${SCREENSHOTS}"))[1];
-  //return rawpath.replace(rawpath.slice(-17),"");
   return rawpath;
+}
+
+
+
+/*
+* Sets the screenshot folder path in openspace
+*/
+async function set_openspace_screenshot_folder(folder){
+  let rawpath = (await openspace.absPath("${SCREENSHOTS}"))[1].split("\\").slice(0,-1).join("\\");
+  await openspace.setScreenshotFolder(`${rawpath}\\${folder}`);
 }
 
 
@@ -69,17 +78,6 @@ async function clear_state() {
   if(openspace) {
     await set_state(READY);
   }
-}
-
-
-
-/*
-* Counts the number of generated frames that exists in the screenshot folder
-* Used to calculate that rendering progress
-*/
-async function count_frames() {
-  let frame_count = await invoke("get_frame_count", {path: _SCREENSHOTS_PATH_});
-  return frame_count;
 }
 
 
@@ -196,23 +194,6 @@ function time_left(starttime = null, duration_as_milliseconds = null) {
   let sec = Math.floor(diff%60);
   return {minutes: min, seconds: sec};
 }
-
-
-
-/*
-* Parses and filters the log file from ffmpeg in order to see how much progress has been made
-*   framecount: The number of frames in the PNG sequence
-* Return (NUMBER): Percent value
-*/
-async function get_ffmpeg_progress(framecount) {
-  let s = await invoke("check_progress");
-  s = s.split(/[\n]/).filter( line => line.includes("frame="));
-  s = s.map( x => (x.replace(/\s/g,'')).split("fps=")[0].replace(/[^0-9]/gi,'') );
-  if(s.length >= 1) {
-    return parseInt(((s[s.length - 1] / framecount) * 100).toPrecision(3))
-  }
-}
-
 
 
 

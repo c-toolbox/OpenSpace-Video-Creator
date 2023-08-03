@@ -50,22 +50,10 @@ You can read more about ffmpeg and PNG sequences here: https://en.wikibooks.org/
 4. Go to file `...\src-tauri\tauri.conf.json` and add reference the resource under `bundle -> resources`
 The outro should now be accessible from the code (which you'll have to figure out yourself 😉)
 
-## Other things and good-to-knows
-Below you will find some additional information that may be good to know.
-
-### Space is not as big as you think (HDD / SDD storage)
-Generating the PNG sequence takes a lot of space (issue [#4](https://github.com/c-toolbox/OpenSpace-Video-Creator/issues/4) would solve this).</br>
-Using screenshots in 720p (30fps) you will generate about 4,5 GB worht of PNGs.</br>
-Using screenshots in 1440p (30fps) you will generate about 10,5 GB worth of PNGs.</br>
-Default OpenSpace rendering (and screenshot) resolution for 1080p screen is 720p and 1440p for a 4K monitor.
-
-<div>
-And don't worry, the program cleans up after itself <p style="display: inline; font-size: x-large">🧹🗑️</p>
-</div>
-
-### Don't tell anyone, but...
-... there is a way to disable automatic outro, change FPS (30 or 60 for now), remove the time limit for recordings and to show all existing recordings (not limited to last 24 hours).
+## Don't tell anyone, but...
+... there is a way to disable automatic outro, change FPS (30 or 60 for now), remove the time limit for recordings and to show all existing recordings (not limited to last 12 hours).
 In order to show these options, input the _Konami code_ 🎮🕹️
+<p style="font-size:14pt;">(&#129045; &#129045; &#129047; &#129047; &#129044; &#129046; &#129044; &#129046; &#9399; &#9398; ENTER)</p>
 
 This options are now shown by default as we always want the outro and other settings as default for the workshops. 
 However, there may be times when someone wants to use this tool under other circumstances.

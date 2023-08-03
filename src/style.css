@@ -85,16 +85,6 @@ div.working .connection-status {
   background-color: #565656;
 }
 
-div.rendering .connection-status {
-  display: flex;
-  background-color: #ffa600;
-  color: #efe;
-  vertical-align: middle;
-  align-items:center;
-  justify-content:center;
-  font-size: xx-large;
-}
-
 .card {
   background-color: #111;
   border-radius: 0.5em;
@@ -185,19 +175,9 @@ div.playback .connection-status {
   font-size: xx-large;
 }
 
-div.generating .connection-status {
+div.rendering .connection-status {
   display: flex;
-  background-color: #4b9ff4;
-  color: #efe;
-  vertical-align: middle;
-  align-items:center;
-  justify-content:center;
-  font-size: xx-large;
-}
-
-div.outro .connection-status {
-  display: flex;
-  background-color: #be4bf4;
+  background-color: #4592df;
   color: #efe;
   vertical-align: middle;
   align-items:center;
